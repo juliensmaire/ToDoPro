@@ -459,7 +459,22 @@
         let categories = [];
         let sectionStates = {}; // Pour stocker l'état des sections
         let lastAction = null; // Pour stocker la dernière action effectuée
-        let sortCriteria = []; // Pour stocker les critères de tri
+let sortCriteria = []; // Pour stocker les critères de tri
+
+// === Auto-save vers Firebase (avec anti-spam) ===
+let autosaveTimer = null;
+const AUTOSAVE_DELAY = 1500; // ms de silence avant d'enregistrer
+let suppressAutoSave = false; // pour éviter un renvoi immédiat après un chargement cloud
+
+function scheduleCloudSave() {
+    if (!fbDocRef && !initFirebase()) return; // pas de Firebase -> ne fait rien
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    setCloudStatus('modifié — sauvegarde…');
+    autosaveTimer = setTimeout(function(){
+        cloudSave({ silent: true });
+        autosaveTimer = null;
+    }, AUTOSAVE_DELAY);
+}
 
         function setCloudStatus(text, cls) {
             const el = document.getElementById('cloud-status');
@@ -517,25 +532,33 @@
             }
         }
 
-        function saveData() {
-            const syncTextarea = document.getElementById('sync-data');
-            const data = { tasks, categories, sectionStates, sortCriteria };
-            const jsonData = JSON.stringify(data, null, 2);
+function saveData() {
+    const syncTextarea = document.getElementById('sync-data');
+    const data = { tasks, categories, sectionStates, sortCriteria };
+    const jsonData = JSON.stringify(data, null, 2);
 
-            // Écrit dans le <textarea> (compatibilité + export manuel)
-            syncTextarea.value = jsonData;
+    // Écrit dans le <textarea> (compatibilité + export manuel)
+    syncTextarea.value = jsonData;
 
-            // Essaie d’écrire dans localStorage
-            if (canUseLocalStorage) {
-                try {
-                    localStorage.setItem(STORAGE_KEY, jsonData);
-                } catch (e) {
-                    console.warn('localStorage indisponible/plein, fallback <textarea> utilisé.', e);
-                }
-            }
-
-            updateSyncBox();
+    // Essaie d’écrire dans localStorage
+    if (canUseLocalStorage) {
+        try {
+            localStorage.setItem(STORAGE_KEY, jsonData);
+        } catch (e) {
+            console.warn('localStorage indisponible/plein, fallback <textarea> utilisé.', e);
         }
+    }
+
+    updateSyncBox();
+    // Auto-save vers le cloud (debounce). Si on vient d'un chargement cloud, on saute une fois.
+    if (typeof suppressAutoSave !== 'undefined') {
+        if (!suppressAutoSave) {
+            scheduleCloudSave();
+        } else {
+            suppressAutoSave = false;
+        }
+    }
+}
 
         function updateSyncBox() {
             const syncBox = document.getElementById('sync-box');
@@ -657,6 +680,7 @@ async function cloudLoad() {
             const data = snap.data();
             if (data && data.state) {
                 // Accepte objet ou string
+                suppressAutoSave = true;
                 todoSetState(data.state);
                 setCloudStatus('chargé', 'ok');
             }
@@ -667,7 +691,9 @@ async function cloudLoad() {
     }
 }
 
-async function cloudSave() {
+async function cloudSave(options) {
+    options = options || {};
+    const silent = !!options.silent;
     if (!fbDocRef && !initFirebase()) return;
     try {
         setCloudStatus('sauvegarde…');
@@ -678,11 +704,11 @@ async function cloudSave() {
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
         setCloudStatus('sauvegardé', 'ok');
-        alert('Sauvegardé dans le cloud ✅');
+        if (!silent) alert('Sauvegardé dans le cloud ✅');
     } catch (e) {
         console.warn('cloudSave() échec :', e);
         setCloudStatus('échec sauvegarde (' + (e.code || e.message || 'inconnu') + ')', 'err');
-        alert('Échec sauvegarde cloud ❌');
+        if (!silent) alert('Échec sauvegarde cloud ❌');
     }
 }
 
