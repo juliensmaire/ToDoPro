@@ -289,7 +289,25 @@
         cursor: pointer;
     }
     #icloud-save-btn:hover { filter: brightness(1.1); }
-</style>
+    /* --- Cloud status badge --- */
+    #cloud-status {
+        position: fixed;
+        left: 16px;
+        bottom: 16px;
+        z-index: 1000;
+        background: #222;
+        color: #ddd;
+        border: 1px solid #333;
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-size: 12px;
+        opacity: 0.9;
+        pointer-events: none;
+        white-space: nowrap;
+    }
+    #cloud-status.ok { border-color: #2ecc71; color: #bff3cf; }
+    #cloud-status.err { border-color: #e74c3c; color: #ffd3ce; }
+    </style>
     <!-- Firebase (compat) for simple in-page usage -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
@@ -298,6 +316,7 @@
 
     <!-- Bouton flottant pour sauvegarde iCloud via Raccourci -->
     <button id="icloud-save-btn" title="Sauver l'état dans iCloud">💾 Sauver</button>
+    <div id="cloud-status" aria-live="polite">Cloud: non initialisé</div>
 
     <!-- Section des Catégories -->
     <div class="section" id="categories-section">
@@ -441,6 +460,14 @@
         let sectionStates = {}; // Pour stocker l'état des sections
         let lastAction = null; // Pour stocker la dernière action effectuée
         let sortCriteria = []; // Pour stocker les critères de tri
+
+        function setCloudStatus(text, cls) {
+            const el = document.getElementById('cloud-status');
+            if (!el) return;
+            el.textContent = `Cloud: ${text}`;
+            el.classList.remove('ok', 'err');
+            if (cls) el.classList.add(cls);
+        }
 
         const STORAGE_KEY = 'TodoProV1';
         let canUseLocalStorage = false;
@@ -606,14 +633,17 @@ function initFirebase() {
     try {
         if (!window.firebase || !window.FB_CONFIG || !window.FB_SHARED_KEY) {
             console.warn('Firebase non configuré (scripts/config manquants).');
+            setCloudStatus('non configuré', 'err');
             return false;
         }
         fbApp = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(window.FB_CONFIG);
         db = firebase.firestore();
         fbDocRef = db.collection('todopro').doc(String(window.FB_SHARED_KEY));
+        setCloudStatus('connecté', 'ok');
         return true;
     } catch (e) {
         console.warn('Init Firebase échoué :', e);
+        setCloudStatus('échec init (' + (e.code || e.message || 'inconnu') + ')', 'err');
         return false;
     }
 }
@@ -621,31 +651,37 @@ function initFirebase() {
 async function cloudLoad() {
     if (!fbDocRef && !initFirebase()) return;
     try {
+        setCloudStatus('chargement…');
         const snap = await fbDocRef.get();
         if (snap.exists) {
             const data = snap.data();
             if (data && data.state) {
                 // Accepte objet ou string
                 todoSetState(data.state);
+                setCloudStatus('chargé', 'ok');
             }
         }
     } catch (e) {
         console.warn('cloudLoad() échec :', e);
+        setCloudStatus('lecture échouée (' + (e.code || e.message || 'inconnu') + ')', 'err');
     }
 }
 
 async function cloudSave() {
     if (!fbDocRef && !initFirebase()) return;
     try {
+        setCloudStatus('sauvegarde…');
         const stateStr = todoGetState();
         const stateObj = JSON.parse(stateStr);
         await fbDocRef.set({
             state: stateObj,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
+        setCloudStatus('sauvegardé', 'ok');
         alert('Sauvegardé dans le cloud ✅');
     } catch (e) {
         console.warn('cloudSave() échec :', e);
+        setCloudStatus('échec sauvegarde (' + (e.code || e.message || 'inconnu') + ')', 'err');
         alert('Échec sauvegarde cloud ❌');
     }
 }
