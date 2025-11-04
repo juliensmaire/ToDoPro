@@ -273,22 +273,6 @@
         #categories-section.collapsed .section-content {
             display: block;          /* le conteneur reste visible */
         }
-    /* Bouton flottant Sauver iCloud */
-    #icloud-save-btn {
-        position: fixed;
-        right: 16px;
-        bottom: 16px;
-        z-index: 1000;
-        background: #2d6cdf;
-        color: #fff;
-        border: none;
-        padding: 10px 14px;
-        border-radius: 8px;
-        font-weight: 600;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.3);
-        cursor: pointer;
-    }
-    #icloud-save-btn:hover { filter: brightness(1.1); }
     /* --- Cloud status badge --- */
     #cloud-status {
         position: fixed;
@@ -315,8 +299,7 @@
 </head>
 <body>
 
-    <!-- Bouton flottant pour sauvegarde iCloud via Raccourci -->
-    <button id="icloud-save-btn" title="Sauver l'état dans iCloud">💾 Sauver</button>
+    
     <div id="cloud-status" aria-live="polite">Cloud: non initialisé</div>
 
     <!-- Section des Catégories -->
@@ -464,7 +447,7 @@ let sortCriteria = []; // Pour stocker les critères de tri
 
 // === Auto-save vers Firebase (avec anti-spam) ===
 let autosaveTimer = null;
-const AUTOSAVE_DELAY = 1500; // ms de silence avant d'enregistrer
+const AUTOSAVE_DELAY = 800; // ms de silence avant d'enregistrer
 let suppressAutoSave = false; // pour éviter un renvoi immédiat après un chargement cloud
 
 function scheduleCloudSave() {
@@ -749,17 +732,6 @@ async function cloudSave(options) {
     }
 }
 
-// Bouton UI + raccourci clavier Cmd/Ctrl+S -> sauvegarde cloud
-document.addEventListener('DOMContentLoaded', function(){
-    const btn = document.getElementById('icloud-save-btn');
-    if (btn) btn.addEventListener('click', cloudSave);
-    window.addEventListener('keydown', function(e){
-        if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) {
-            e.preventDefault();
-            cloudSave();
-        }
-    });
-});
 
         // Synchronisation inter-fenêtres si la page est ouverte ailleurs
         if (typeof window !== 'undefined') {
@@ -1787,6 +1759,14 @@ document.addEventListener('DOMContentLoaded', function(){
         // Attendre que le DOM soit chargé avant d'exécuter init()
         document.addEventListener('DOMContentLoaded', function() {
             init();
+        });
+
+        // Raccourci Cmd+S (Mac) pour sauvegarde forcée silencieuse
+        window.addEventListener('keydown', function(e) {
+            if (e.metaKey && (e.key === 's' || e.key === 'S')) {
+                e.preventDefault();
+                cloudSave({ silent: true });
+            }
         });
 </script>
 
