@@ -553,15 +553,15 @@ if (typeof window !== 'undefined') {
     window.todoSetState = todoSetState;
 }
 
-// === CONFIG FIREBASE — sera lue depuis localStorage si présente, sinon on peut coller via une invite ===
-window.FB_CONFIG = window.FB_CONFIG || {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: "",
-    measurementId: ""
+// === CONFIG FIREBASE — config codée en dur ===
+window.FB_CONFIG = {
+    apiKey: "AIzaSyBpR5Q9mXOAG18DDpBOX3F28jYiS4zOgDc",
+    authDomain: "mes-todopro.firebaseapp.com",
+    projectId: "mes-todopro",
+    storageBucket: "mes-todopro.firebasestorage.app",
+    messagingSenderId: "456898151913",
+    appId: "1:456898151913:web:c5b9bf1e3ac1bcb5887778",
+    measurementId: "G-Z7644F6D7N"
 };
 window.FB_SHARED_KEY = window.FB_SHARED_KEY || 'todopro-shared-9e4f0c8a-0a9b-4f5a-9b4b-7c1e2d3f8a61';
 
@@ -592,25 +592,10 @@ function initFirebase() {
     // Vérifie/charge la config et la clé; si manquantes, demande à l'utilisateur (1re fois)
     let cfgOk = ensureFirebaseConfig();
     let keyOk = ensureSharedKey();
-    if (!cfgOk) {
-        const pasted = window.prompt('Colle ici l\'objet \'firebaseConfig\' (JSON) depuis la console Firebase → SDK Web (onglet CDN).', '');
-        if (pasted) {
-            try {
-                const obj = JSON.parse(pasted);
-                window.FB_CONFIG = obj;
-                localStorage.setItem('FB_CONFIG_JSON', JSON.stringify(obj));
-                cfgOk = true;
-            } catch (e) { console.warn('Config Firebase invalide:', e); }
-        }
-    }
-    if (!keyOk) {
-        const k = window.prompt('Entre une clé partagée (≥ 20 caractères) pour identifier ton document Firestore commun.', '');
-        if (k && k.length >= 20) {
-            window.FB_SHARED_KEY = k;
-            localStorage.setItem('FB_SHARED_KEY', k);
-            keyOk = true;
-        }
-    }
+    // Pas de popup : on s'appuie sur FB_CONFIG codé en dur
+    cfgOk = ensureFirebaseConfig();
+    // Pas de popup : on s'appuie sur FB_SHARED_KEY fourni dans le code
+    keyOk = ensureSharedKey();
     // Persist the constant shared key if not already present in localStorage and valid
     if (!localStorage.getItem('FB_SHARED_KEY') && window.FB_SHARED_KEY && window.FB_SHARED_KEY.length >= 20) {
         localStorage.setItem('FB_SHARED_KEY', window.FB_SHARED_KEY);
