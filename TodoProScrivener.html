@@ -1761,9 +1761,9 @@ async function cloudSave(options) {
             init();
         });
 
-        // Raccourci Cmd+S (Mac) pour sauvegarde forcée silencieuse
+        // Raccourci Cmd+S (Mac) et Ctrl+S (Windows/Linux) pour sauvegarde forcée silencieuse
         window.addEventListener('keydown', function(e) {
-            if (e.metaKey && (e.key === 's' || e.key === 'S')) {
+            if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) {
                 e.preventDefault();
                 cloudSave({ silent: true });
             }
