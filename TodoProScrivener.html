@@ -563,7 +563,7 @@ window.FB_CONFIG = window.FB_CONFIG || {
     appId: "",
     measurementId: ""
 };
-window.FB_SHARED_KEY = window.FB_SHARED_KEY || '';
+window.FB_SHARED_KEY = window.FB_SHARED_KEY || 'todopro-shared-9e4f0c8a-0a9b-4f5a-9b4b-7c1e2d3f8a61';
 
 function ensureFirebaseConfig() {
     try {
@@ -610,6 +610,10 @@ function initFirebase() {
             localStorage.setItem('FB_SHARED_KEY', k);
             keyOk = true;
         }
+    }
+    // Persist the constant shared key if not already present in localStorage and valid
+    if (!localStorage.getItem('FB_SHARED_KEY') && window.FB_SHARED_KEY && window.FB_SHARED_KEY.length >= 20) {
+        localStorage.setItem('FB_SHARED_KEY', window.FB_SHARED_KEY);
     }
     if (!cfgOk || !keyOk) {
         console.warn('Firebase non configuré: config/clé manquantes. Sauvegarde locale seulement.');
