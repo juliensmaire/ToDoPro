@@ -1,0 +1,1656 @@
+<html lang="fr"><head>
+    <meta charset="UTF-8">
+    <title>Todo List Suivi Roman</title>
+    <style>
+        /* Mode sombre permanent */
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        /* Styles pour les sections */
+        .section {
+            margin-bottom: 20px;
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .section-title {
+            margin-left: 10px;
+            font-size: 1.5em;
+            color: #ffffff;
+        }
+        .section-content {
+            display: block;
+        }
+        .section.collapsed .section-content {
+            display: none;
+        }
+        .toggle-icon {
+            font-size: 1.5em;
+            background: none;
+            border: none;
+            color: #e0e0e0;
+            cursor: pointer;
+            padding: 0;
+        }
+        /* Styles pour les tâches */
+        .task {
+            background-color: #1e1e1e;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            border-left: 5px solid transparent; /* Barre de priorité */
+        }
+        .task-header {
+            display: flex;
+            align-items: center;
+        }
+        .task.completed .task-title {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+        .task-details {
+            display: none;
+            margin-top: 10px;
+            width: 100%;
+        }
+        .task.expanded .task-details {
+            display: block;
+        }
+        .task-title {
+            margin-left: 10px;
+            color: #e0e0e0;
+            flex: 1;
+            cursor: pointer;
+        }
+        .task-title-input {
+            margin-left: 10px;
+            flex: 1;
+            padding: 5px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #333333;
+            outline: none;
+        }
+        .task-category {
+            margin-left: 10px;
+            color: #e0e0e0;
+            font-size: 0.9em;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        .task-due-date {
+            margin-left: 10px;
+            color: #e0e0e0;
+            font-size: 0.9em;
+        }
+        .task-subtasks-count {
+            margin-left: 10px;
+            color: #e0e0e0;
+            font-size: 0.9em;
+        }
+        /* Boutons */
+        button {
+            background-color: #333333;
+            color: #e0e0e0;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        button:hover {
+            background-color: #444444;
+        }
+        /* Inputs */
+        input[type="text"], select, textarea {
+            padding: 10px;
+            margin-right: 10px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #333333;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        /* Styles pour les sous-tâches */
+        .subtasks {
+            list-style: none;
+            padding-left: 0;
+        }
+        .subtasks li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .subtasks input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .subtask-title {
+            flex: 1;
+            cursor: pointer;
+        }
+        .subtask-title-input {
+            flex: 1;
+            padding: 5px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #333333;
+            outline: none;
+        }
+        /* Styles pour les catégories */
+        .category-list {
+            list-style: none;
+            padding: 0;
+        }
+        .category-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            cursor: move;
+        }
+        .category-handle {
+            cursor: move;
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+        .category-name {
+            flex: 1;
+            cursor: pointer;
+        }
+        .category-name-input {
+            flex: 1;
+            padding: 5px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #333333;
+            outline: none;
+        }
+        /* Style du bouton de dépliage */
+        .toggle-button {
+            background: none;
+            border: none;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        /* Styles pour les priorités */
+        .priority-low {
+            border-left-color: green;
+        }
+        .priority-medium {
+            border-left-color: orange;
+        }
+        .priority-high {
+            border-left-color: red;
+        }
+        
+        /* Style pour le bouton Annuler */
+        #undo-btn {
+            background-color: #444444;
+            color: #e0e0e0;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #undo-btn:hover {
+            background-color: #555555;
+        }
+        /* Styles pour les filtres */
+        .filter-group {
+            margin-bottom: 10px;
+        }
+        .filter-group label {
+            margin-right: 10px;
+        }
+        .filter-group select {
+            padding: 5px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #333333;
+        }
+        /* Styles pour les boutons de tri */
+        .sort-buttons {
+            margin-bottom: 10px;
+        }
+        .sort-button {
+            background-color: #333333;
+            color: #e0e0e0;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        .sort-button.active {
+            background-color: #555555;
+        }
+        /* Styles pour les zones d'import/export */
+        #export-data, #import-data {
+            width: 100%;
+            height: 100px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #333333;
+            margin-bottom: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        #export-data {
+            resize: none;
+        }
+
+        /* --- Catégories : vue compacte lorsque la section est repliée --- */
+        #categories-section.collapsed #category-list {
+            display: block !important;     /* Force l’affichage même si .section-content est masqué */
+            margin-top: 10px;
+        }
+
+        #categories-section.collapsed .category-item button {
+            display: none;                 /* Masque les boutons "Supprimer" */
+        }
+
+        /* Affiche la prévisualisation couleur si la section Catégories est ouverte */
+        #categories-section:not(.collapsed) #color-preview {
+            display: inline-block;
+        }
+
+        #categories-section.collapsed #new-category-name,
+        #categories-section.collapsed #new-category-color,
+        #categories-section.collapsed #add-category-btn,
+        #categories-section.collapsed #color-preview {
+            display: none;                 /* Masque le formulaire d’ajout et l’aperçu */
+        }
+
+        /* --- Catégories : vue compacte lorsqu’on replie --- */
+        #categories-section.collapsed .section-content {
+            display: block;          /* le conteneur reste visible */
+        }
+    /* Bouton flottant Sauver iCloud */
+    #icloud-save-btn {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 1000;
+        background: #2d6cdf;
+        color: #fff;
+        border: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+        cursor: pointer;
+    }
+    #icloud-save-btn:hover { filter: brightness(1.1); }
+</style>
+    <!-- Firebase (compat) for simple in-page usage -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+    <!-- Bouton flottant pour sauvegarde iCloud via Raccourci -->
+    <button id="icloud-save-btn" title="Sauver l'état dans iCloud">💾 Sauver</button>
+
+    <!-- Section des Catégories -->
+    <div class="section" id="categories-section">
+        <div class="section-header" id="categories-header">
+            <button class="toggle-icon" id="categories-toggle">▼</button>
+            <h2 class="section-title">Catégories</h2>
+        </div>
+        <div class="section-content" id="categories-content">
+            <ul id="category-list" class="category-list"><li class="category-item" draggable="true" data-index="0"><span class="category-handle">☰</span><span class="category-name" style="color: rgb(255, 255, 255);">Général</span></li></ul>
+            <input type="text" id="new-category-name" placeholder="Nouvelle catégorie">
+            <!-- Sélecteur pour le code couleur -->
+            <select id="new-category-color">
+                <option value="#FF0000" style="color: #FF0000;">Rouge</option>
+                <option value="#008000" style="color: #008000;">Vert</option>
+                <option value="#0000FF" style="color: #0000FF;">Bleu</option>
+                <option value="#FFFF00" style="color: #FFFF00;">Jaune</option>
+                <option value="#FFA500" style="color: #FFA500;">Orange</option>
+                <option value="#800080" style="color: #800080;">Violet</option>
+                <option value="#FFC0CB" style="color: #FFC0CB;">Rose</option>
+                <option value="#A52A2A" style="color: #A52A2A;">Marron</option>
+                <option value="#808080" style="color: #808080;">Gris</option>
+                <option value="#000000" style="color: #000000;">Noir</option>
+                <option value="#FFFFFF" style="color: #FFFFFF;">Blanc</option>
+                <option value="#00FFFF" style="color: #00FFFF;">Cyan</option>
+                <option value="#FF00FF" style="color: #FF00FF;">Magenta</option>
+                <option value="#00FF00" style="color: #00FF00;">Lime</option>
+                <option value="#4B0082" style="color: #4B0082;">Indigo</option>
+                <option value="#FFD700" style="color: #FFD700;">Or</option>
+                <option value="#C0C0C0" style="color: #C0C0C0;">Argent</option>
+                <option value="#CD7F32" style="color: #CD7F32;">Bronze</option>
+                <option value="#40E0D0" style="color: #40E0D0;">Turquoise</option>
+                <option value="#E6E6FA" style="color: #E6E6FA;">Lavande</option>
+            </select>
+            <span id="color-preview" style="width:20px;height:20px;margin-left:10px;border:1px solid #ccc;"></span>
+            <button id="add-category-btn">Ajouter Catégorie</button>
+        </div>
+    </div>
+
+    <!-- Section pour Ajouter une Tâche -->
+    <div class="section" id="add-task-section">
+        <div class="section-header" id="add-task-header">
+            <button class="toggle-icon" id="add-task-toggle">▼</button>
+            <h2 class="section-title">Ajouter une Tâche</h2>
+        </div>
+        <div class="section-content" id="add-task-content">
+            <input type="text" id="task-title" placeholder="Titre de la tâche">
+            <select id="task-priority">
+                <option value="low">Basse</option>
+                <option value="medium">Moyenne</option>
+                <option value="high">Haute</option>
+            </select>
+            <select id="task-category"><option value="Général">Général</option></select>
+            <button id="add-task-btn">Ajouter Tâche</button>
+        </div>
+    </div>
+
+    <!-- Section des Filtres -->
+    <div class="section" id="filters-section">
+        <div class="section-header" id="filters-header">
+            <button class="toggle-icon" id="filters-toggle">▼</button>
+            <h2 class="section-title">Filtres</h2>
+        </div>
+        <div class="section-content" id="filters-content">
+            <!-- Filtres existants -->
+            <div class="filter-group">
+                <button data-filter="all">Toutes</button>
+                <button data-filter="completed">Complétées</button>
+                <button data-filter="active">Actives</button>
+            </div>
+            <!-- Filtre par Catégorie -->
+            <div class="filter-group">
+                <label for="filter-category">Catégorie :</label>
+                <select id="filter-category"><option value="all">Toutes</option><option value="Général">Général</option></select>
+            </div>
+            <!-- Filtre par Priorité -->
+            <div class="filter-group">
+                <label for="filter-priority">Priorité :</label>
+                <select id="filter-priority">
+                    <option value="all">Toutes</option>
+                    <option value="high">Haute</option>
+                    <option value="medium">Moyenne</option>
+                    <option value="low">Basse</option>
+                </select>
+            </div>
+            <!-- Filtre par Date -->
+            <div class="filter-group">
+                <label for="filter-date">Date d'échéance :</label>
+                <select id="filter-date">
+                    <option value="all">Toutes</option>
+                    <option value="today">Aujourd'hui</option>
+                    <option value="tomorrow">Demain</option>
+                    <option value="this_week">Cette Semaine</option>
+                    <option value="overdue">En Retard</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section des Tâches -->
+    <div class="section" id="tasks-section">
+        <div class="section-header" id="tasks-header">
+            <button class="toggle-icon" id="tasks-toggle">▼</button>
+            <h2 class="section-title">Tâches</h2>
+        </div>
+        <div class="section-content" id="tasks-content">
+            <!-- Boutons de Tri -->
+            <div class="sort-buttons">
+                <button class="sort-button" data-sort="dueDate">Date</button>
+                <button class="sort-button" data-sort="category">Catégorie</button>
+                <button class="sort-button" data-sort="priority">Importance</button>
+            </div>
+            <div id="task-list"></div>
+        </div>
+    </div>
+
+    <!-- Section pour Importer/Exporter les Données -->
+    <div class="section" id="import-export-section">
+        <div class="section-header" id="import-export-header">
+            <button class="toggle-icon" id="import-export-toggle">▼</button>
+            <h2 class="section-title">Sauvegarde &amp; Restauration</h2>
+        </div>
+        <div class="section-content" id="import-export-content">
+            <textarea id="sync-box" placeholder="Copier ou coller ici pour sauvegarder/restaurer..." style="width:100%;height:100px;background-color:#1e1e1e;color:#e0e0e0;border:1px solid #333;padding:10px;box-sizing:border-box;"></textarea>
+            <button id="copy-btn">Sélectionner</button>
+        </div>
+    </div>
+
+    <!-- Bouton de Réinitialisation -->
+    <button id="reset-btn">Réinitialiser la Liste</button>
+    <!-- Bouton Annuler -->
+    <button id="undo-btn" disabled="">Annuler la Dernière Action</button>
+
+
+<!-- Champ caché pour synchronisation Scrivener -->
+<textarea id="sync-data" style="display:none;"></textarea>
+
+<script>
+        // Déclarations de variables globales
+        let tasks = [];
+        let categories = [];
+        let sectionStates = {}; // Pour stocker l'état des sections
+        let lastAction = null; // Pour stocker la dernière action effectuée
+        let sortCriteria = []; // Pour stocker les critères de tri
+
+        const STORAGE_KEY = 'TodoProV1';
+        let canUseLocalStorage = false;
+
+        (function testLocalStorage() {
+            try {
+                const t = '__ls_test__';
+                localStorage.setItem(t, '1');
+                localStorage.removeItem(t);
+                canUseLocalStorage = true;
+            } catch (e) {
+                canUseLocalStorage = false; // navigation privée, quota, webview éphémère, etc.
+            }
+        })();
+
+        // Charger les données depuis le stockage (localStorage prioritaire, sinon <textarea> caché)
+        function loadData() {
+            const syncTextarea = document.getElementById('sync-data');
+            let jsonText = '';
+
+            // 1) priorité au localStorage
+            if (canUseLocalStorage) {
+                jsonText = localStorage.getItem(STORAGE_KEY) || '';
+            }
+
+            // 2) sinon, on retombe sur le <textarea> caché
+            if (!jsonText) {
+                jsonText = syncTextarea.value || '';
+            }
+
+            try {
+                const data = JSON.parse(jsonText || '{}');
+                tasks = data.tasks || [];
+                categories = data.categories || [];
+                sectionStates = data.sectionStates || {};
+                sortCriteria = data.sortCriteria || [];
+            } catch (e) {
+                console.warn('Erreur chargement :', e);
+                tasks = [];
+                categories = [];
+                sectionStates = {};
+                sortCriteria = [];
+            }
+
+            if (!categories.some(cat => cat.name === 'Général')) {
+                categories.push({ name: 'Général', color: '#ffffff' });
+            }
+        }
+
+        function saveData() {
+            const syncTextarea = document.getElementById('sync-data');
+            const data = { tasks, categories, sectionStates, sortCriteria };
+            const jsonData = JSON.stringify(data, null, 2);
+
+            // Écrit dans le <textarea> (compatibilité + export manuel)
+            syncTextarea.value = jsonData;
+
+            // Essaie d’écrire dans localStorage
+            if (canUseLocalStorage) {
+                try {
+                    localStorage.setItem(STORAGE_KEY, jsonData);
+                } catch (e) {
+                    console.warn('localStorage indisponible/plein, fallback <textarea> utilisé.', e);
+                }
+            }
+
+            updateSyncBox();
+        }
+
+        function updateSyncBox() {
+            const syncBox = document.getElementById('sync-box');
+            const data = { tasks, categories, sectionStates, sortCriteria };
+            syncBox.value = JSON.stringify(data, null, 2);
+        }
+
+// === Synchronisation iCloud via Raccourcis ===
+// Renvoie l'état complet au format JSON (string)
+function todoGetState() {
+    const data = { tasks, categories, sectionStates, sortCriteria };
+    return JSON.stringify(data);
+}
+
+// Charge un état JSON (string ou objet) et réaffiche
+function todoSetState(state) {
+    try {
+        const obj = (typeof state === 'string') ? JSON.parse(state) : state;
+        tasks = obj.tasks || [];
+        categories = obj.categories || [];
+        sectionStates = obj.sectionStates || {};
+        sortCriteria = obj.sortCriteria || [];
+
+        // Persiste aussi dans localStorage / <textarea>
+        saveData();
+
+        // Rafraîchit l'UI
+        renderCategories();
+        renderTasks();
+        applySectionStates();
+        updateSyncBox();
+        return true;
+    } catch (e) {
+        console.warn('todoSetState: JSON invalide', e);
+        return false;
+    }
+}
+
+// Expose explicitement les fonctions pour Raccourcis (WebView / Safari)
+if (typeof window !== 'undefined') {
+    window.todoGetState = todoGetState;
+    window.todoSetState = todoSetState;
+}
+
+// === Firebase Cloud Sync (GitHub Pages + Firebase) ===
+// 1) Renseigne ta config Firebase ci-dessous (Console Firebase > Paramètres du projet > SDK Web)
+// 2) Renseigne une clé partagée (chaîne secrète suffisamment longue) pour identifier ton document commun
+window.FB_CONFIG = {
+    apiKey: "REMPLACE-MOI",
+    authDomain: "REMPLACE-MOI.firebaseapp.com",
+    projectId: "REMPLACE-MOI",
+};
+window.FB_SHARED_KEY = 'CHANGE-MOI-EN-CLE-UNIQUE-TRES-LONGUE';
+
+let fbApp = null, db = null, fbDocRef = null;
+function initFirebase() {
+    try {
+        if (!window.firebase || !window.FB_CONFIG || !window.FB_SHARED_KEY) {
+            console.warn('Firebase non configuré (scripts/config manquants).');
+            return false;
+        }
+        fbApp = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(window.FB_CONFIG);
+        db = firebase.firestore();
+        fbDocRef = db.collection('todopro').doc(String(window.FB_SHARED_KEY));
+        return true;
+    } catch (e) {
+        console.warn('Init Firebase échoué :', e);
+        return false;
+    }
+}
+
+async function cloudLoad() {
+    if (!fbDocRef && !initFirebase()) return;
+    try {
+        const snap = await fbDocRef.get();
+        if (snap.exists) {
+            const data = snap.data();
+            if (data && data.state) {
+                // Accepte objet ou string
+                todoSetState(data.state);
+            }
+        }
+    } catch (e) {
+        console.warn('cloudLoad() échec :', e);
+    }
+}
+
+async function cloudSave() {
+    if (!fbDocRef && !initFirebase()) return;
+    try {
+        const stateStr = todoGetState();
+        const stateObj = JSON.parse(stateStr);
+        await fbDocRef.set({
+            state: stateObj,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        alert('Sauvegardé dans le cloud ✅');
+    } catch (e) {
+        console.warn('cloudSave() échec :', e);
+        alert('Échec sauvegarde cloud ❌');
+    }
+}
+
+// Bouton UI + raccourci clavier Cmd/Ctrl+S -> sauvegarde cloud
+document.addEventListener('DOMContentLoaded', function(){
+    const btn = document.getElementById('icloud-save-btn');
+    if (btn) btn.addEventListener('click', cloudSave);
+    window.addEventListener('keydown', function(e){
+        if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            cloudSave();
+        }
+    });
+});
+
+        // Synchronisation inter-fenêtres si la page est ouverte ailleurs
+        if (typeof window !== 'undefined') {
+            window.addEventListener('storage', (e) => {
+                if (e.key === STORAGE_KEY && canUseLocalStorage) {
+                    try {
+                        const data = JSON.parse(e.newValue || '{}');
+                        tasks = data.tasks || [];
+                        categories = data.categories || [];
+                        sectionStates = data.sectionStates || {};
+                        sortCriteria = data.sortCriteria || [];
+                        renderCategories();
+                        renderTasks();
+                        applySectionStates();
+                        updateSyncBox();
+                    } catch (_) {}
+                }
+            });
+        }
+
+
+        // Liste des couleurs prédéfinies
+        const predefinedColors = [
+            { name: 'Rouge', code: '#FF0000' },
+            { name: 'Vert', code: '#008000' },
+            { name: 'Bleu', code: '#0000FF' },
+            { name: 'Jaune', code: '#FFFF00' },
+            { name: 'Orange', code: '#FFA500' },
+            { name: 'Violet', code: '#800080' },
+            { name: 'Rose', code: '#FFC0CB' },
+            { name: 'Marron', code: '#A52A2A' },
+            { name: 'Gris', code: '#808080' },
+            { name: 'Noir', code: '#000000' },
+            { name: 'Blanc', code: '#FFFFFF' },
+            { name: 'Cyan', code: '#00FFFF' },
+            { name: 'Magenta', code: '#FF00FF' },
+            { name: 'Lime', code: '#00FF00' },
+            { name: 'Indigo', code: '#4B0082' },
+            { name: 'Or', code: '#FFD700' },
+            { name: 'Argent', code: '#C0C0C0' },
+            { name: 'Bronze', code: '#CD7F32' },
+            { name: 'Turquoise', code: '#40E0D0' },
+            { name: 'Lavande', code: '#E6E6FA' },
+        ];
+        // Rendre les catégories
+        function renderCategories() {
+            const categoryList = document.getElementById('category-list');
+            categoryList.innerHTML = '';
+            categories.forEach((category, index) => {
+                const li = document.createElement('li');
+                li.className = 'category-item';
+                li.setAttribute('draggable', 'true');
+                li.setAttribute('data-index', index);
+
+                const handle = document.createElement('span');
+                handle.className = 'category-handle';
+                handle.textContent = '☰';
+
+                // Nom de la catégorie (édition en ligne)
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'category-name';
+                nameSpan.textContent = category.name;
+                nameSpan.style.color = category.color;
+
+                // Événement pour passer en mode édition
+                nameSpan.addEventListener('click', function() {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'category-name-input';
+                    input.value = category.name;
+                    li.replaceChild(input, nameSpan);
+                    input.focus();
+
+                    input.addEventListener('blur', function() {
+                        const newName = input.value.trim();
+                        if (newName && !categories.some(cat => cat.name === newName && cat !== category)) {
+                            // Stocker la dernière action
+                            lastAction = {
+                                type: 'editCategory',
+                                oldName: category.name,
+                                newName: newName,
+                                category: { ...category }
+                            };
+                            enableUndoButton();
+
+                            category.name = newName;
+                            // Mettre à jour les tâches associées
+                            tasks.forEach(task => {
+                                if (task.category === lastAction.oldName) {
+                                    task.category = newName;
+                                }
+                            });
+                            saveData();
+                            renderCategories();
+                            renderTasks();
+                        } else {
+                            li.replaceChild(nameSpan, input);
+                        }
+                    });
+
+                    input.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            input.blur();
+                        }
+                    });
+                });
+
+                // Bouton Supprimer (sauf pour la catégorie 'Général')
+                if (category.name !== 'Général') {
+                    const deleteCategoryBtn = document.createElement('button');
+                    deleteCategoryBtn.textContent = 'Supprimer';
+                    deleteCategoryBtn.addEventListener('click', function() {
+                        deleteCategory(category.name);
+                    });
+                    li.appendChild(deleteCategoryBtn);
+                }
+
+                li.appendChild(handle);
+                li.appendChild(nameSpan);
+
+                categoryList.appendChild(li);
+            });
+
+            // Ajout des événements pour le drag and drop
+            addCategoryDragAndDropEvents();
+
+            // Mise à jour des sélecteurs de catégorie
+            const taskCategorySelect = document.getElementById('task-category');
+            taskCategorySelect.innerHTML = '';
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.name;
+                option.textContent = category.name;
+                taskCategorySelect.appendChild(option);
+            });
+
+            // Mise à jour du filtre de catégorie
+            const filterCategorySelect = document.getElementById('filter-category');
+            filterCategorySelect.innerHTML = '<option value="all">Toutes</option>';
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.name;
+                option.textContent = category.name;
+                filterCategorySelect.appendChild(option);
+            });
+            // Appel récursif pour garantir la mise à jour (évite les problèmes d'affichage)
+            // (Cet appel est utile si, par exemple, le DOM n'était pas prêt lors de la première exécution.)
+            // Mais attention à ne pas créer de boucle infinie ! On ne le fait qu'une fois ici.
+        }
+
+        // Fonction pour ajouter les événements de drag and drop aux catégories
+        function addCategoryDragAndDropEvents() {
+            const categoryItems = document.querySelectorAll('.category-item');
+            categoryItems.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('dragenter', handleDragEnter);
+                item.addEventListener('dragleave', handleDragLeave);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragend', handleDragEnd);
+            });
+        }
+
+        let dragSrcEl = null;
+
+        function handleDragStart(e) {
+            dragSrcEl = this;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.outerHTML);
+            this.classList.add('dragElem');
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDragEnter(e) {
+            this.classList.add('over');
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('over');
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            if (dragSrcEl !== this) {
+                const srcIndex = dragSrcEl.getAttribute('data-index');
+                const destIndex = this.getAttribute('data-index');
+
+                // Réordonner les catégories
+                categories.splice(destIndex, 0, categories.splice(srcIndex, 1)[0]);
+                saveData();
+                renderCategories();
+            }
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('over');
+            this.classList.remove('dragElem');
+        }
+
+        // Ancien code Couleurs supprimé (nettoyage).
+
+        // Supprimer une catégorie
+        function deleteCategory(categoryName) {
+            // Stocker la dernière action
+            const deletedCategory = categories.find(cat => cat.name === categoryName);
+            const affectedTasks = tasks.filter(task => task.category === categoryName);
+            lastAction = {
+                type: 'deleteCategory',
+                category: deletedCategory,
+                tasks: affectedTasks
+            };
+            enableUndoButton();
+
+            // Supprimer la catégorie
+            categories = categories.filter(cat => cat.name !== categoryName);
+
+            // Vérifier que la catégorie 'Général' existe, sinon la créer
+            if (!categories.some(cat => cat.name === 'Général')) {
+                categories.push({ name: 'Général', color: '#ffffff' });
+            }
+
+            // Mettre à jour les tâches associées
+            tasks.forEach(task => {
+                if (task.category === categoryName) {
+                    task.category = 'Général';
+                }
+            });
+
+            saveData();
+            renderCategories();
+            renderTasks();
+        }
+
+        // Ajouter une catégorie
+        document.getElementById('add-category-btn').addEventListener('click', function() {
+            const categoryName = document.getElementById('new-category-name').value.trim();
+            const categoryColor = document.getElementById('new-category-color').value.trim();
+            if (categoryName && categoryColor && !categories.some(cat => cat.name === categoryName)) {
+                categories.push({ name: categoryName, color: categoryColor });
+                saveData();
+                renderCategories();
+                document.getElementById('new-category-color').dispatchEvent(new Event('change'));
+                document.getElementById('new-category-name').value = '';
+            }
+        });
+
+        // Prévisualisation couleur catégorie
+        document.getElementById('new-category-color').addEventListener('change', function() {
+            const preview = document.getElementById('color-preview');
+            preview.style.backgroundColor = this.value;
+        });
+
+        // Ajouter une tâche
+        document.getElementById('add-task-btn').addEventListener('click', function() {
+            const title = document.getElementById('task-title').value.trim();
+            const priority = document.getElementById('task-priority').value;
+            const categoryName = document.getElementById('task-category').value;
+            if (title) {
+                const task = {
+                    id: Date.now(),
+                    title,
+                    priority,
+                    category: categoryName,
+                    completed: false,
+                    completionDate: null,
+                    description: '',
+                    subtasks: [],
+                    dueDate: '',
+                    expanded: false // Indique si la tâche est dépliée ou non
+                };
+                tasks.push(task);
+                saveData();
+                renderTasks();
+                document.getElementById('task-title').value = '';
+            }
+        });
+
+        // Fonction pour parser les dates
+        function parseDate(input) {
+            input = input.trim();
+            let day, month, year;
+            let date;
+
+            // Format dd/MM/yyyy ou d/M/yyyy
+            const regexDMY = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+            const matchDMY = input.match(regexDMY);
+            if (matchDMY) {
+                day = parseInt(matchDMY[1]);
+                month = parseInt(matchDMY[2]) - 1; // Les mois commencent à 0
+                year = parseInt(matchDMY[3]);
+                date = new Date(year, month, day);
+                if (!isNaN(date)) return date;
+            }
+
+            // Format yyyyMMdd
+            const regexYMDCompact = /^(\d{4})(\d{2})(\d{2})$/;
+            const matchYMDCompact = input.match(regexYMDCompact);
+            if (matchYMDCompact) {
+                year = parseInt(matchYMDCompact[1]);
+                month = parseInt(matchYMDCompact[2]) - 1;
+                day = parseInt(matchYMDCompact[3]);
+                date = new Date(year, month, day);
+                if (!isNaN(date)) return date;
+            }
+
+            // Format yyyy-MM-dd
+            const regexYMD = /^(\d{4})-(\d{1,2})-(\d{1,2})$/;
+            const matchYMD = input.match(regexYMD);
+            if (matchYMD) {
+                year = parseInt(matchYMD[1]);
+                month = parseInt(matchYMD[2]) - 1;
+                day = parseInt(matchYMD[3]);
+                date = new Date(year, month, day);
+                if (!isNaN(date)) return date;
+            }
+
+            // Format ddMMyyyy
+            const regexDMYCompact = /^(\d{2})(\d{2})(\d{4})$/;
+            const matchDMYCompact = input.match(regexDMYCompact);
+            if (matchDMYCompact) {
+                day = parseInt(matchDMYCompact[1]);
+                month = parseInt(matchDMYCompact[2]) - 1;
+                year = parseInt(matchDMYCompact[3]);
+                date = new Date(year, month, day);
+                if (!isNaN(date)) return date;
+            }
+
+            // Format ISO standard ou autres formats reconnus par Date.parse()
+            date = new Date(input);
+            if (!isNaN(date)) return date;
+
+            return null;
+        }
+
+        // Rendre les tâches
+        function renderTasks() {
+            const taskList = document.getElementById('task-list');
+            taskList.innerHTML = '';
+
+            let filteredTasks = applyFilters(tasks);
+
+            // Trier les tâches selon les critères de tri
+            if (sortCriteria.length > 0) {
+                filteredTasks.sort((a, b) => {
+                    for (let criterion of sortCriteria) {
+                        let comparison = 0;
+                        if (criterion === 'dueDate') {
+                            const dateA = a.dueDate ? new Date(a.dueDate) : new Date(8640000000000000); // Date max si pas de date
+                            const dateB = b.dueDate ? new Date(b.dueDate) : new Date(8640000000000000);
+                            comparison = dateA - dateB;
+                        } else if (criterion === 'category') {
+                            comparison = a.category.localeCompare(b.category);
+                        } else if (criterion === 'priority') {
+                            const priorityOrder = { 'high': 1, 'medium': 2, 'low': 3 };
+                            comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
+                        }
+                        if (comparison !== 0) return comparison;
+                    }
+                    return 0;
+                });
+            }
+
+            filteredTasks.forEach(task => {
+                const taskDiv = document.createElement('div');
+                const categoryColor = categories.find(cat => cat.name === task.category)?.color || '#ffffff';
+                taskDiv.className = 'task priority-' + task.priority + (task.completed ? ' completed' : '');
+                taskDiv.style.borderLeftColor = categoryColor;
+                if (task.expanded) {
+                    taskDiv.classList.add('expanded');
+                }
+
+                // En-tête de la tâche
+                const taskHeader = document.createElement('div');
+                taskHeader.className = 'task-header';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = task.completed;
+                checkbox.addEventListener('change', function(e) {
+                    e.stopPropagation();
+                    toggleTaskCompletion(task.id);
+                });
+
+                // Titre de la tâche (édition en ligne)
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'task-title';
+                titleSpan.textContent = task.title;
+                if (task.completed) {
+                    titleSpan.style.textDecoration = 'line-through';
+                    titleSpan.style.opacity = '0.6';
+                }
+
+                // Événement pour passer en mode édition
+                titleSpan.addEventListener('click', function() {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'task-title-input';
+                    input.value = task.title;
+                    taskHeader.replaceChild(input, titleSpan);
+                    input.focus();
+
+                    // Sauvegarder le nouveau titre
+                    input.addEventListener('blur', function() {
+                        task.title = input.value.trim() || task.title;
+                        saveData();
+                        renderTasks();
+                    });
+
+                    // Sauvegarder en appuyant sur Entrée
+                    input.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            input.blur();
+                        }
+                    });
+                });
+
+                // Afficher la catégorie
+                const categorySpan = document.createElement('span');
+                categorySpan.className = 'task-category';
+                categorySpan.textContent = task.category;
+                const category = categories.find(cat => cat.name === task.category);
+                categorySpan.style.backgroundColor = categoryColor;        // fond coloré
+                categorySpan.style.color           = getContrastYIQ(categoryColor); // texte noir ou blanc lisible
+
+                // Fonction pour déterminer la couleur du texte en fonction de la luminosité
+                function getContrastYIQ(hexcolor) {
+                    hexcolor = hexcolor.replace("#", "");
+                    const r = parseInt(hexcolor.substr(0,2),16);
+                    const g = parseInt(hexcolor.substr(2,2),16);
+                    const b = parseInt(hexcolor.substr(4,2),16);
+                    const yiq = ((r*299)+(g*587)+(b*114))/1000;
+                    return (yiq >= 128) ? '#000000' : '#FFFFFF';
+                }
+
+                // **Afficher le compte à rebours jusqu'à la date d'échéance**
+                const dueDateSpan = document.createElement('span');
+                dueDateSpan.className = 'task-due-date';
+                if (task.dueDate) {
+                    const dateObj = new Date(task.dueDate);
+                    if (!isNaN(dateObj)) {
+                        const now = new Date();
+                        const timeDiff = dateObj - now;
+                        const isOverdue = timeDiff < 0;
+
+                        // Calculer le temps restant en jours, heures, semaines
+                        const diffInSeconds = Math.abs(timeDiff) / 1000;
+                        const diffInMinutes = Math.floor(diffInSeconds / 60);
+                        const diffInHours = Math.floor(diffInMinutes / 60);
+                        const diffInDays = Math.floor(diffInHours / 24);
+                        const diffInWeeks = Math.floor(diffInDays / 7);
+
+                        let timeRemainingText = '';
+                        if (diffInWeeks >= 1) {
+                            timeRemainingText = `${diffInWeeks} semaine${diffInWeeks > 1 ? 's' : ''}`;
+                        } else if (diffInDays >= 1) {
+                            timeRemainingText = `${diffInDays} jour${diffInDays > 1 ? 's' : ''}`;
+                        } else if (diffInHours >= 1) {
+                            timeRemainingText = `${diffInHours} heure${diffInHours > 1 ? 's' : ''}`;
+                        } else {
+                            timeRemainingText = `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''}`;
+                        }
+
+                        if (isOverdue && !task.completed) {
+                            dueDateSpan.textContent = `En retard de ${timeRemainingText}`;
+                            dueDateSpan.style.color = 'red';
+                        } else if (!isOverdue && !task.completed) {
+                            dueDateSpan.textContent = `${timeRemainingText} restant${diffInMinutes > 1 ? 's' : ''}`;
+                        } else if (task.completed) {
+                            dueDateSpan.textContent = 'Complétée';
+                            dueDateSpan.style.color = 'green';
+                        }
+                    } else {
+                        dueDateSpan.textContent = 'Date invalide';
+                        dueDateSpan.style.color = 'red';
+                    }
+                } else {
+                    dueDateSpan.textContent = '';
+                }
+
+                // Afficher le nombre de sous-tâches
+                const subtasksCountSpan = document.createElement('span');
+                subtasksCountSpan.className = 'task-subtasks-count';
+                const totalSubtasks = task.subtasks.length;
+                const completedSubtasks = task.subtasks.filter(subtask => subtask.completed).length;
+                subtasksCountSpan.textContent = `${completedSubtasks}/${totalSubtasks}`;
+
+                // Bouton de dépliage/repliage
+                const toggleButton = document.createElement('button');
+                toggleButton.textContent = task.expanded ? '▲' : '▼';
+                toggleButton.className = 'toggle-button';
+                toggleButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    task.expanded = !task.expanded;
+                    saveData();
+                    renderTasks();
+                });
+
+                taskHeader.appendChild(checkbox);
+                taskHeader.appendChild(titleSpan);
+                taskHeader.appendChild(categorySpan);
+                taskHeader.appendChild(dueDateSpan);
+                taskHeader.appendChild(subtasksCountSpan);
+                taskHeader.appendChild(toggleButton);
+
+                taskDiv.appendChild(taskHeader);
+
+                // Détails de la tâche
+                const taskDetails = document.createElement('div');
+                taskDetails.className = 'task-details';
+
+                // Description
+                const descriptionLabel = document.createElement('label');
+                descriptionLabel.textContent = 'Description :';
+                const description = document.createElement('textarea');
+                description.value = task.description || '';
+                description.placeholder = 'Description détaillée';
+                description.addEventListener('input', function() {
+                    task.description = description.value;
+                    saveData();
+                });
+                taskDetails.appendChild(descriptionLabel);
+                taskDetails.appendChild(description);
+
+                // Sous-tâches
+                const subtasksLabel = document.createElement('h4');
+                subtasksLabel.textContent = 'Sous-tâches';
+                const subtaskList = document.createElement('ul');
+                subtaskList.className = 'subtasks';
+                task.subtasks = task.subtasks || [];
+                task.subtasks.forEach((subtask, index) => {
+                    const li = document.createElement('li');
+
+                    const subCheckbox = document.createElement('input');
+                    subCheckbox.type = 'checkbox';
+                    subCheckbox.checked = subtask.completed;
+                    subCheckbox.addEventListener('change', function() {
+                        subtask.completed = subCheckbox.checked;
+                        saveData();
+                        renderTasks();
+                    });
+
+                    // Titre de la sous-tâche (édition en ligne)
+                    const subSpan = document.createElement('span');
+                    subSpan.className = 'subtask-title';
+                    subSpan.textContent = subtask.title;
+                    if (subtask.completed) {
+                        subSpan.style.textDecoration = 'line-through';
+                        subSpan.style.opacity = '0.6';
+                    }
+
+                    // Événement pour passer en mode édition
+                    subSpan.addEventListener('click', function() {
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.className = 'subtask-title-input';
+                        input.value = subtask.title;
+                        li.replaceChild(input, subSpan);
+                        input.focus();
+
+                        input.addEventListener('blur', function() {
+                            subtask.title = input.value.trim() || subtask.title;
+                            saveData();
+                            renderTasks();
+                        });
+
+                        input.addEventListener('keydown', function(e) {
+                            if (e.key === 'Enter') {
+                                input.blur();
+                            }
+                        });
+                    });
+
+                    li.appendChild(subCheckbox);
+                    li.appendChild(subSpan);
+                    subtaskList.appendChild(li);
+                });
+
+                taskDetails.appendChild(subtasksLabel);
+                taskDetails.appendChild(subtaskList);
+
+                // Ajouter une sous-tâche
+                const newSubtaskInput = document.createElement('input');
+                newSubtaskInput.type = 'text';
+                newSubtaskInput.placeholder = 'Nouvelle sous-tâche';
+
+                const addSubtaskBtn = document.createElement('button');
+                addSubtaskBtn.textContent = 'Ajouter Sous-tâche';
+                addSubtaskBtn.addEventListener('click', function() {
+                    const subtaskTitle = newSubtaskInput.value.trim();
+                    if (subtaskTitle) {
+                        task.subtasks.push({
+                            title: subtaskTitle,
+                            completed: false
+                        });
+                        saveData();
+                        renderTasks();
+                        newSubtaskInput.value = '';
+                    }
+                });
+
+                taskDetails.appendChild(newSubtaskInput);
+                taskDetails.appendChild(addSubtaskBtn);
+
+                // Informations supplémentaires
+                const info = document.createElement('div');
+                const categoryLabel = document.createElement('label');
+                categoryLabel.textContent = 'Catégorie :';
+                const categorySelect = document.createElement('select');
+                categories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.name;
+                    option.textContent = cat.name;
+                    if (cat.name === task.category) {
+                        option.selected = true;
+                    }
+                    categorySelect.appendChild(option);
+                });
+                categorySelect.addEventListener('change', function() {
+                    task.category = categorySelect.value;
+                    saveData();
+                    renderTasks();
+                });
+
+                const priorityLabel = document.createElement('label');
+                priorityLabel.textContent = 'Priorité :';
+                const prioritySelect = document.createElement('select');
+                const priorities = ['low', 'medium', 'high'];
+                priorities.forEach(prio => {
+                    const option = document.createElement('option');
+                    option.value = prio;
+                    option.textContent = prio.charAt(0).toUpperCase() + prio.slice(1);
+                    if (prio === task.priority) {
+                        option.selected = true;
+                    }
+                    prioritySelect.appendChild(option);
+                });
+                prioritySelect.addEventListener('change', function() {
+                    task.priority = prioritySelect.value;
+                    saveData();
+                    renderTasks();
+                });
+
+                const dueDateLabel = document.createElement('label');
+                dueDateLabel.textContent = 'Date d\'échéance :';
+                const dueDateInput = document.createElement('input');
+                dueDateInput.type = 'text'; // Champ texte pour la date
+                dueDateInput.value = task.dueDateDisplay || task.dueDate || '';
+                dueDateInput.placeholder = 'Ex: 31/12/2023 ou 20231231';
+                dueDateInput.addEventListener('change', function() {
+                    const parsedDate = parseDate(dueDateInput.value);
+                    if (parsedDate) {
+                        task.dueDate = parsedDate.toISOString();
+                        task.dueDateDisplay = dueDateInput.value.trim(); // Sauvegarder l'affichage original
+                    } else {
+                        task.dueDate = null;
+                        task.dueDateDisplay = dueDateInput.value.trim();
+                    }
+                    saveData();
+                    renderTasks();
+                });
+
+                info.appendChild(categoryLabel);
+                info.appendChild(categorySelect);
+                info.appendChild(priorityLabel);
+                info.appendChild(prioritySelect);
+                info.appendChild(dueDateLabel);
+                info.appendChild(dueDateInput);
+
+                taskDetails.appendChild(info);
+
+                // Bouton de suppression de la tâche
+                const deleteTaskBtn = document.createElement('button');
+                deleteTaskBtn.textContent = 'Supprimer la Tâche';
+                deleteTaskBtn.addEventListener('click', function() {
+                    // Stocker la dernière action
+                    lastAction = {
+                        type: 'deleteTask',
+                        task: { ...task } // Cloner l'objet tâche
+                    };
+                    enableUndoButton();
+
+                    // Suppression de la tâche
+                    tasks = tasks.filter(t => t.id !== task.id);
+                    saveData();
+                    renderTasks();
+                });
+
+                taskDetails.appendChild(deleteTaskBtn);
+
+                taskDiv.appendChild(taskDetails);
+
+                taskList.appendChild(taskDiv);
+            });
+        }
+
+        // Fonction pour appliquer les filtres
+        function applyFilters(taskArray) {
+            let filteredTasks = [...taskArray];
+
+            // Filtre par statut (toutes, complétées, actives)
+            const statusFilterButtons = document.querySelectorAll('[data-filter]');
+            let statusFilter = 'all';
+            statusFilterButtons.forEach(button => {
+                if (button.classList.contains('active-filter')) {
+                    statusFilter = button.getAttribute('data-filter');
+                }
+            });
+
+            if (statusFilter === 'completed') {
+                filteredTasks = filteredTasks.filter(task => task.completed);
+            } else if (statusFilter === 'active') {
+                filteredTasks = filteredTasks.filter(task => !task.completed);
+            }
+
+            // Filtre par catégorie
+            const categoryFilter = document.getElementById('filter-category').value;
+            if (categoryFilter !== 'all') {
+                filteredTasks = filteredTasks.filter(task => task.category === categoryFilter);
+            }
+
+            // Filtre par priorité
+            const priorityFilter = document.getElementById('filter-priority').value;
+            if (priorityFilter !== 'all') {
+                filteredTasks = filteredTasks.filter(task => task.priority === priorityFilter);
+            }
+
+            // Filtre par date
+            const dateFilter = document.getElementById('filter-date').value;
+            if (dateFilter !== 'all') {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                if (dateFilter === 'today') {
+                    filteredTasks = filteredTasks.filter(task => {
+                        const taskDate = new Date(task.dueDate);
+                        return task.dueDate && taskDate.getTime() === today.getTime();
+                    });
+                } else if (dateFilter === 'tomorrow') {
+                    const tomorrow = new Date(today);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    filteredTasks = filteredTasks.filter(task => {
+                        const taskDate = new Date(task.dueDate);
+                        return task.dueDate && taskDate.getTime() === tomorrow.getTime();
+                    });
+                } else if (dateFilter === 'this_week') {
+                    const weekStart = new Date(today);
+                    const weekEnd = new Date(today);
+                    weekEnd.setDate(weekEnd.getDate() + 7);
+                    filteredTasks = filteredTasks.filter(task => {
+                        const taskDate = new Date(task.dueDate);
+                        return task.dueDate && taskDate >= weekStart && taskDate < weekEnd;
+                    });
+                } else if (dateFilter === 'overdue') {
+                    filteredTasks = filteredTasks.filter(task => {
+                        const taskDate = new Date(task.dueDate);
+                        return task.dueDate && taskDate < today && !task.completed;
+                    });
+                }
+            }
+
+            return filteredTasks;
+        }
+
+        // Basculer l'état de complétion d'une tâche
+        function toggleTaskCompletion(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                task.completed = !task.completed;
+                task.completionDate = task.completed ? new Date().toISOString() : null;
+                saveData();
+                renderTasks();
+            }
+        }
+
+        // Filtrer les tâches par statut
+        document.querySelectorAll('[data-filter]').forEach(button => {
+            button.addEventListener('click', function() {
+                document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.remove('active-filter'));
+                this.classList.add('active-filter');
+                renderTasks();
+            });
+        });
+
+        // Filtrer les tâches par catégorie, priorité et date
+        document.getElementById('filter-category').addEventListener('change', renderTasks);
+        document.getElementById('filter-priority').addEventListener('change', renderTasks);
+        document.getElementById('filter-date').addEventListener('change', renderTasks);
+
+        // Gestion des boutons de tri
+        document.querySelectorAll('.sort-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const criterion = this.getAttribute('data-sort');
+                if (sortCriteria.includes(criterion)) {
+                    // Si le critère est déjà dans la liste, le retirer
+                    sortCriteria = sortCriteria.filter(c => c !== criterion);
+                    this.classList.remove('active');
+                } else {
+                    // Ajouter le critère à la liste
+                    sortCriteria.push(criterion);
+                    this.classList.add('active');
+                }
+                saveData();
+                renderTasks();
+            });
+        });
+
+        // Réinitialiser la liste
+        document.getElementById('reset-btn').addEventListener('click', function() {
+            // Stocker la dernière action
+            lastAction = {
+                type: 'reset',
+                tasks: [...tasks], // Cloner les tâches
+                categories: [...categories], // Cloner les catégories
+                sectionStates: { ...sectionStates } // Cloner les états des sections
+            };
+            enableUndoButton();
+
+            // Réinitialisation
+            tasks = [];
+            categories = [];
+            sectionStates = {}; // Réinitialiser les états des sections
+            sortCriteria = [];
+            if (canUseLocalStorage) {
+                try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+            }
+            saveData();
+            renderTasks();
+            renderCategories();
+            applySectionStates(); // Appliquer les états par défaut
+        });
+
+        // Fonction pour activer le bouton Annuler
+        function enableUndoButton() {
+            const undoBtn = document.getElementById('undo-btn');
+            undoBtn.disabled = false;
+        }
+
+        // Fonction pour désactiver le bouton Annuler
+        function disableUndoButton() {
+            const undoBtn = document.getElementById('undo-btn');
+            undoBtn.disabled = true;
+        }
+
+        // Fonction pour annuler la dernière action
+        document.getElementById('undo-btn').addEventListener('click', function() {
+            if (lastAction) {
+                switch (lastAction.type) {
+                    case 'deleteTask':
+                        // Restaurer la tâche supprimée
+                        tasks.push(lastAction.task);
+                        saveData();
+                        renderTasks();
+                        break;
+                    case 'deleteCategory':
+                        // Restaurer la catégorie supprimée
+                        categories.push(lastAction.category);
+                        // Restaurer les tâches affectées
+                        tasks.forEach(task => {
+                            if (lastAction.tasks.some(t => t.id === task.id)) {
+                                task.category = lastAction.category.name;
+                            }
+                        });
+                        saveData();
+                        renderCategories();
+                        renderTasks();
+                        break;
+                    case 'editCategory':
+                        // Restaurer le nom de la catégorie
+                        const category = categories.find(cat => cat.name === lastAction.newName);
+                        if (category) {
+                            category.name = lastAction.oldName;
+                            // Mettre à jour les tâches associées
+                            tasks.forEach(task => {
+                                if (task.category === lastAction.newName) {
+                                    task.category = lastAction.oldName;
+                                }
+                            });
+                            saveData();
+                            renderCategories();
+                            renderTasks();
+                        }
+                        break;
+                    case 'reset':
+                        // Restaurer les données précédentes
+                        tasks = lastAction.tasks;
+                        categories = lastAction.categories;
+                        sectionStates = lastAction.sectionStates;
+                        sortCriteria = [];
+                        saveData();
+                        renderTasks();
+                        renderCategories();
+                        applySectionStates();
+                        break;
+                }
+                lastAction = null;
+                disableUndoButton();
+            }
+        });
+
+
+        // Gestion du champ de synchronisation unique (export/import)
+        document.getElementById('copy-btn').addEventListener('click', function() {
+            const syncBox = document.getElementById('sync-box');
+            syncBox.focus();
+            syncBox.select();
+            alert("Texte sélectionné. Appuyez sur Cmd+C (ou Ctrl+C) pour copier.");
+        });
+
+        document.getElementById('sync-box').addEventListener('input', function() {
+            try {
+                const data = JSON.parse(this.value);
+                tasks = data.tasks || [];
+                categories = data.categories || [];
+                sectionStates = data.sectionStates || {};
+                sortCriteria = data.sortCriteria || [];
+                renderCategories();
+                renderTasks();
+               // applySectionStates();
+            } catch (e) {
+                // Ne rien faire si l’utilisateur colle quelque chose d'invalide
+            }
+        });
+
+        // Gestion des sections repliables
+        function setupCollapsibleSections() {
+            const sections = [
+                { sectionId: 'categories-section', toggleId: 'categories-toggle' },   
+                { sectionId: 'add-task-section', toggleId: 'add-task-toggle' },
+                { sectionId: 'filters-section', toggleId: 'filters-toggle' },
+                { sectionId: 'tasks-section', toggleId: 'tasks-toggle' },
+                { sectionId: 'import-export-section', toggleId: 'import-export-toggle' },
+            ];
+
+            sections.forEach(section => {
+                const sectionElement = document.getElementById(section.sectionId);
+                const header = sectionElement.querySelector('.section-header');
+                const toggleIcon = document.getElementById(section.toggleId);
+
+                // Appliquer l'état initial de la section
+                if (sectionStates[section.sectionId] === false) {
+                    sectionElement.classList.add('collapsed');
+                    toggleIcon.textContent = '►';
+                } else {
+                    sectionElement.classList.remove('collapsed');
+                    toggleIcon.textContent = '▼';
+                }
+
+                header.addEventListener('click', function() {
+                    sectionElement.classList.toggle('collapsed');
+                    const isCollapsed = sectionElement.classList.contains('collapsed');
+                    toggleIcon.textContent = isCollapsed ? '►' : '▼';
+
+                    // Sauvegarder l'état de la section
+                    sectionStates[section.sectionId] = !isCollapsed;
+                    saveData();
+                });
+            });
+        }
+
+        // Appliquer les états des sections au chargement
+        function applySectionStates() {
+            const sections = [
+                { sectionId: 'categories-section', toggleId: 'categories-toggle' },
+                { sectionId: 'color-codes-section', toggleId: 'color-codes-toggle' },
+                { sectionId: 'add-task-section', toggleId: 'add-task-toggle' },
+                { sectionId: 'filters-section', toggleId: 'filters-toggle' },
+                { sectionId: 'tasks-section', toggleId: 'tasks-toggle' },
+                { sectionId: 'import-export-section', toggleId: 'import-export-toggle' },
+            ];
+
+            sections.forEach(section => {
+                const sectionElement = document.getElementById(section.sectionId);
+                const toggleIcon = document.getElementById(section.toggleId);
+
+                if (sectionElement && toggleIcon) {
+                    // Appliquer l'état enregistré
+                    if (sectionStates[section.sectionId] === false) {
+                        sectionElement.classList.add('collapsed');
+                        toggleIcon.textContent = '►';
+                    } else {
+                        sectionElement.classList.remove('collapsed');
+                        toggleIcon.textContent = '▼';
+                    }
+                }
+            });
+        }
+
+        // Initialisation
+        function init() {
+            loadData();
+            renderCategories();
+            renderTasks();
+            setupCollapsibleSections();
+            applySectionStates();
+            disableUndoButton();
+            updateSyncBox();
+            // Initialise Firebase (si config présente) puis charge l'état partagé
+            initFirebase();
+            cloudLoad();
+            // Initialiser la prévisualisation de la couleur sélectionnée
+            document.getElementById('new-category-color').dispatchEvent(new Event('change'));
+
+            // Réinitialiser les boutons de tri
+            document.querySelectorAll('.sort-button').forEach(button => {
+                const criterion = button.getAttribute('data-sort');
+                if (sortCriteria.includes(criterion)) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+        }
+
+
+        // Attendre que le DOM soit chargé avant d'exécuter init()
+        document.addEventListener('DOMContentLoaded', function() {
+            init();
+        });
+</script>
+
+</body></html>
