@@ -553,18 +553,67 @@ if (typeof window !== 'undefined') {
     window.todoSetState = todoSetState;
 }
 
-// === Firebase Cloud Sync (GitHub Pages + Firebase) ===
-// 1) Renseigne ta config Firebase ci-dessous (Console Firebase > Paramètres du projet > SDK Web)
-// 2) Renseigne une clé partagée (chaîne secrète suffisamment longue) pour identifier ton document commun
-window.FB_CONFIG = {
-    apiKey: "REMPLACE-MOI",
-    authDomain: "REMPLACE-MOI.firebaseapp.com",
-    projectId: "REMPLACE-MOI",
+// === CONFIG FIREBASE — sera lue depuis localStorage si présente, sinon on peut coller via une invite ===
+window.FB_CONFIG = window.FB_CONFIG || {
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    storageBucket: "",
+    messagingSenderId: "",
+    appId: "",
+    measurementId: ""
 };
-window.FB_SHARED_KEY = 'CHANGE-MOI-EN-CLE-UNIQUE-TRES-LONGUE';
+window.FB_SHARED_KEY = window.FB_SHARED_KEY || '';
+
+function ensureFirebaseConfig() {
+    try {
+        if (window.FB_CONFIG && window.FB_CONFIG.apiKey) return true;
+        const saved = localStorage.getItem('FB_CONFIG_JSON');
+        if (saved) {
+            window.FB_CONFIG = JSON.parse(saved);
+            return !!window.FB_CONFIG.apiKey;
+        }
+    } catch (_) {}
+    return false;
+}
+
+function ensureSharedKey() {
+    if (window.FB_SHARED_KEY && window.FB_SHARED_KEY.length >= 20) return true;
+    const saved = localStorage.getItem('FB_SHARED_KEY');
+    if (saved && saved.length >= 20) {
+        window.FB_SHARED_KEY = saved;
+        return true;
+    }
+    return false;
+}
 
 let fbApp = null, db = null, fbDocRef = null;
 function initFirebase() {
+    // Vérifie/charge la config et la clé; si manquantes, demande à l'utilisateur (1re fois)
+    let cfgOk = ensureFirebaseConfig();
+    let keyOk = ensureSharedKey();
+    if (!cfgOk) {
+        const pasted = window.prompt('Colle ici l\'objet \'firebaseConfig\' (JSON) depuis la console Firebase → SDK Web (onglet CDN).', '');
+        if (pasted) {
+            try {
+                const obj = JSON.parse(pasted);
+                window.FB_CONFIG = obj;
+                localStorage.setItem('FB_CONFIG_JSON', JSON.stringify(obj));
+                cfgOk = true;
+            } catch (e) { console.warn('Config Firebase invalide:', e); }
+        }
+    }
+    if (!keyOk) {
+        const k = window.prompt('Entre une clé partagée (≥ 20 caractères) pour identifier ton document Firestore commun.', '');
+        if (k && k.length >= 20) {
+            window.FB_SHARED_KEY = k;
+            localStorage.setItem('FB_SHARED_KEY', k);
+            keyOk = true;
+        }
+    }
+    if (!cfgOk || !keyOk) {
+        console.warn('Firebase non configuré: config/clé manquantes. Sauvegarde locale seulement.');
+    }
     try {
         if (!window.firebase || !window.FB_CONFIG || !window.FB_SHARED_KEY) {
             console.warn('Firebase non configuré (scripts/config manquants).');
