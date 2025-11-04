@@ -304,6 +304,7 @@
         opacity: 0.9;
         pointer-events: none;
         white-space: nowrap;
+        display: none; /* caché par défaut */
     }
     #cloud-status.ok { border-color: #2ecc71; color: #bff3cf; }
     #cloud-status.err { border-color: #e74c3c; color: #ffd3ce; }
@@ -476,13 +477,21 @@ function scheduleCloudSave() {
     }, AUTOSAVE_DELAY);
 }
 
-        function setCloudStatus(text, cls) {
-            const el = document.getElementById('cloud-status');
-            if (!el) return;
-            el.textContent = `Cloud: ${text}`;
-            el.classList.remove('ok', 'err');
-            if (cls) el.classList.add(cls);
-        }
+function setCloudStatus(text, cls, opts) {
+    const el = document.getElementById('cloud-status');
+    if (!el) return;
+    opts = opts || {};
+    const persist = !!opts.persist; // si true, on ne masque pas automatiquement
+    el.textContent = `Cloud: ${text}`;
+    el.classList.remove('ok', 'err');
+    if (cls) el.classList.add(cls);
+    el.style.display = 'block';
+    // auto-hide sauf erreurs ou persist demandé
+    clearTimeout(el._hideTimer);
+    if (!persist && !el.classList.contains('err')) {
+        el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 1600);
+    }
+}
 
         const STORAGE_KEY = 'TodoProV1';
         let canUseLocalStorage = false;
@@ -662,6 +671,26 @@ function initFirebase() {
         fbApp = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(window.FB_CONFIG);
         db = firebase.firestore();
         fbDocRef = db.collection('todopro').doc(String(window.FB_SHARED_KEY));
+        // Écoute temps réel des changements depuis Firestore
+        try {
+            if (window._fbUnsub) { try { window._fbUnsub(); } catch(_){} }
+            window._fbUnsub = fbDocRef.onSnapshot(function(snap){
+                // Ignore les écritures locales (évite effet ping-pong)
+                if (snap.metadata && snap.metadata.hasPendingWrites) return;
+                if (!snap.exists) return;
+                const d = snap.data();
+                if (d && d.state) {
+                    suppressAutoSave = true; // n'écrit pas tout de suite après application
+                    todoSetState(d.state);
+                    setCloudStatus('mise à jour reçue', 'ok');
+                }
+            }, function(err){
+                console.warn('onSnapshot erreur:', err);
+                setCloudStatus('écoute échouée (' + (err.code || err.message || 'inconnu') + ')', 'err');
+            });
+        } catch (e) {
+            console.warn('onSnapshot non initialisé:', e);
+        }
         setCloudStatus('connecté', 'ok');
         return true;
     } catch (e) {
