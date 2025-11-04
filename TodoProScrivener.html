@@ -477,18 +477,26 @@ function scheduleCloudSave() {
     }, AUTOSAVE_DELAY);
 }
 
+const CLOUD_BADGE_MODE = 'errors'; // 'off' = jamais, 'errors' = seulement erreurs, 'all' = tout
+
 function setCloudStatus(text, cls, opts) {
+    // Gestion d'affichage : 'off' (jamais), 'errors' (seulement erreurs), 'all' (tout)
+    if (CLOUD_BADGE_MODE === 'off') return;
+    if (CLOUD_BADGE_MODE === 'errors' && cls !== 'err') return;
+
     const el = document.getElementById('cloud-status');
     if (!el) return;
     opts = opts || {};
     const persist = !!opts.persist; // si true, on ne masque pas automatiquement
+
     el.textContent = `Cloud: ${text}`;
     el.classList.remove('ok', 'err');
     if (cls) el.classList.add(cls);
     el.style.display = 'block';
-    // auto-hide sauf erreurs ou persist demandé
+
+    // auto-hide pour les statuts non "err" (sauf si persist)
     clearTimeout(el._hideTimer);
-    if (!persist && !el.classList.contains('err')) {
+    if (cls !== 'err' && !persist) {
         el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 1600);
     }
 }
@@ -682,7 +690,7 @@ function initFirebase() {
                 if (d && d.state) {
                     suppressAutoSave = true; // n'écrit pas tout de suite après application
                     todoSetState(d.state);
-                    setCloudStatus('mise à jour reçue', 'ok');
+                    // mise à jour reçue (silencieux)
                 }
             }, function(err){
                 console.warn('onSnapshot erreur:', err);
