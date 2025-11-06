@@ -425,6 +425,7 @@
         <div class="section-content" id="import-export-content">
             <textarea id="sync-box" placeholder="Copier ou coller ici pour sauvegarder/restaurer..." style="width:100%;height:100px;background-color:#1e1e1e;color:#e0e0e0;border:1px solid #333;padding:10px;box-sizing:border-box;"></textarea>
             <button id="copy-btn">Sélectionner</button>
+            <button id="share-link-btn">Copier le lien du projet</button>
         </div>
     </div>
 
@@ -432,8 +433,6 @@
     <button id="reset-btn">Réinitialiser la Liste</button>
     <!-- Bouton Annuler -->
     <button id="undo-btn" disabled="">Annuler la Dernière Action</button>
-
-
 <!-- Champ caché pour synchronisation Scrivener -->
 <textarea id="sync-data" style="display:none;"></textarea>
 
@@ -444,6 +443,7 @@
         let sectionStates = {}; // Pour stocker l'état des sections
         let lastAction = null; // Pour stocker la dernière action effectuée
 let sortCriteria = []; // Pour stocker les critères de tri
+let canUseLocalStorage = false; // indicateur: localStorage utilisable
 
 // === Auto-save vers Firebase (avec anti-spam) ===
 let autosaveTimer = null;
@@ -484,8 +484,15 @@ function setCloudStatus(text, cls, opts) {
     }
 }
 
-        const STORAGE_KEY = 'TodoProV1';
-        let canUseLocalStorage = false;
+        // Multi-projet : clé projet depuis l'URL (?k=UUID) → isole Firestore et localStorage par projet
+const _params = new URLSearchParams(location.search);
+const URL_KEY = _params.get('k');
+const IS_UUID = /^[a-f0-9-]{36}$/i.test(URL_KEY || '');
+const PROJECT_KEY = IS_UUID ? URL_KEY : null;
+
+const STORAGE_BASE = 'TodoProV1';
+const STORAGE_KEY = PROJECT_KEY ? `${STORAGE_BASE}:${PROJECT_KEY}` : STORAGE_BASE;
+const LS_FBKEY = PROJECT_KEY ? `FB_SHARED_KEY:${PROJECT_KEY}` : 'FB_SHARED_KEY';
 
         (function testLocalStorage() {
             try {
@@ -613,7 +620,6 @@ window.FB_CONFIG = {
     appId: "1:456898151913:web:c5b9bf1e3ac1bcb5887778",
     measurementId: "G-Z7644F6D7N"
 };
-window.FB_SHARED_KEY = window.FB_SHARED_KEY || 'todopro-shared-9e4f0c8a-0a9b-4f5a-9b4b-7c1e2d3f8a61';
 
 function ensureFirebaseConfig() {
     try {
@@ -629,7 +635,7 @@ function ensureFirebaseConfig() {
 
 function ensureSharedKey() {
     if (window.FB_SHARED_KEY && window.FB_SHARED_KEY.length >= 20) return true;
-    const saved = localStorage.getItem('FB_SHARED_KEY');
+    const saved = localStorage.getItem(LS_FBKEY);
     if (saved && saved.length >= 20) {
         window.FB_SHARED_KEY = saved;
         return true;
@@ -639,6 +645,10 @@ function ensureSharedKey() {
 
 let fbApp = null, db = null, fbDocRef = null;
 function initFirebase() {
+    // Priorité à la clé projet passée dans l'URL (?k=...)
+    if (PROJECT_KEY) {
+        window.FB_SHARED_KEY = PROJECT_KEY;
+    }
     // Vérifie/charge la config et la clé; si manquantes, demande à l'utilisateur (1re fois)
     let cfgOk = ensureFirebaseConfig();
     let keyOk = ensureSharedKey();
@@ -647,8 +657,8 @@ function initFirebase() {
     // Pas de popup : on s'appuie sur FB_SHARED_KEY fourni dans le code
     keyOk = ensureSharedKey();
     // Persist the constant shared key if not already present in localStorage and valid
-    if (!localStorage.getItem('FB_SHARED_KEY') && window.FB_SHARED_KEY && window.FB_SHARED_KEY.length >= 20) {
-        localStorage.setItem('FB_SHARED_KEY', window.FB_SHARED_KEY);
+    if (!localStorage.getItem(LS_FBKEY) && window.FB_SHARED_KEY && window.FB_SHARED_KEY.length >= 20) {
+        localStorage.setItem(LS_FBKEY, window.FB_SHARED_KEY);
     }
     if (!cfgOk || !keyOk) {
         console.warn('Firebase non configuré: config/clé manquantes. Sauvegarde locale seulement.');
@@ -1648,6 +1658,35 @@ async function cloudSave(options) {
             syncBox.focus();
             syncBox.select();
             alert("Texte sélectionné. Appuyez sur Cmd+C (ou Ctrl+C) pour copier.");
+        });
+
+        // Copier le lien du projet (inclut ?k=<clé>)
+        document.getElementById('share-link-btn').addEventListener('click', function() {
+            const base = location.origin + location.pathname;
+            const key = String(window.FB_SHARED_KEY || PROJECT_KEY || '').trim();
+            const link = key ? `${base}?k=${encodeURIComponent(key)}` : base;
+
+            function fallbackCopy(text) {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                try { document.execCommand('copy'); } catch (_) {}
+                document.body.removeChild(ta);
+            }
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(link).then(() => {
+                    alert('Lien du projet copié dans le presse-papiers !');
+                }).catch(() => {
+                    fallbackCopy(link);
+                    alert('Lien du projet copié dans le presse-papiers !');
+                });
+            } else {
+                fallbackCopy(link);
+                alert('Lien du projet copié dans le presse-papiers !');
+            }
         });
 
         document.getElementById('sync-box').addEventListener('input', function() {
