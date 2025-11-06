@@ -320,6 +320,8 @@
     #project-header { display:flex; align-items:center; gap:10px; margin: 10px 0 16px; }
     #project-title-input { font-size: 1.4em; font-weight: 600; background:#1e1e1e; color:#e0e0e0; border:1px solid #333; padding:6px 10px; border-radius:6px; width:100%; max-width: 600px; }
     #project-title-input::placeholder { color:#888; }
+    #project-title-label { display:block; font-weight:600; color:#e0e0e0; margin-bottom:6px; }
+    #project-title-input { box-shadow: 0 0 0 1px #444 inset; }
     </style>
     <!-- Firebase (compat) for simple in-page usage -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -345,6 +347,7 @@
   </div>
 
   <div id="project-header">
+    <label for="project-title-input" id="project-title-label">Nom du projet</label>
     <input id="project-title-input" type="text" placeholder="TITRE">
   </div>
   
