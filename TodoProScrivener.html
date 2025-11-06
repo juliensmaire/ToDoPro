@@ -322,6 +322,15 @@
     #project-title-input::placeholder { color:#888; }
     #project-title-label { display:block; font-weight:600; color:#e0e0e0; margin-bottom:6px; }
     #project-title-input { box-shadow: 0 0 0 1px #444 inset; }
+    /* Titre affiché (centré) au-dessus des sections */
+    .project-title-display {
+        text-align: center;
+        font-size: 1.8em;
+        font-weight: 800;
+        margin: 8px 0 16px;
+        letter-spacing: 0.2px;
+        color: #eaeaea;
+    }
     </style>
     <!-- Firebase (compat) for simple in-page usage -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -350,6 +359,8 @@
     <label for="project-title-input" id="project-title-label">Nom du projet</label>
     <input id="project-title-input" type="text" placeholder="TITRE">
   </div>
+
+  <div id="project-title-display" class="project-title-display">TITRE</div>
   
     <!-- Section des Catégories -->
     <div class="section" id="categories-section">
@@ -652,18 +663,20 @@ function todoSetState(state) {
         renderTasks();
         applySectionStates();
         updateSyncBox();
-        const ti = document.getElementById('project-title-input');
-        if (ti) ti.value = projectTitle || 'TITRE';
+        renderTitle();
         return true;
     } catch (e) {
         console.warn('todoSetState: JSON invalide', e);
         return false;
     }
 }
-// Affiche le titre du projet dans l'input (idempotent)
+// Affiche le titre du projet dans l'input et la zone centrée (idempotent)
 function renderTitle() {
+    const titleText = projectTitle || 'TITRE';
     const ti = document.getElementById('project-title-input');
-    if (ti) ti.value = projectTitle || 'TITRE';
+    if (ti) ti.value = titleText;
+    const td = document.getElementById('project-title-display');
+    if (td) td.textContent = titleText;
 }
 
 // Expose explicitement les fonctions pour Raccourcis (WebView / Safari)
