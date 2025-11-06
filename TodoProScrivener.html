@@ -317,20 +317,12 @@
     .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
     .modal .error { color: #ff8a8a; display: none; font-size: 12px; margin-top: 6px; }
     /* --- Titre du projet --- */
-    #project-header { display:flex; align-items:center; gap:10px; margin: 10px 0 16px; }
-    #project-title-input { font-size: 1.4em; font-weight: 600; background:#1e1e1e; color:#e0e0e0; border:1px solid #333; padding:6px 10px; border-radius:6px; width:100%; max-width: 600px; }
+    #project-header { display:flex; align-items:center; justify-content:center; gap:10px; margin: 10px 0 16px; }
+    #project-title-input { font-size: 1.4em; font-weight: 600; background:#1e1e1e; color:#e0e0e0; border:1px solid #333; padding:6px 10px; border-radius:6px; width:100%; max-width: 520px; text-align:center; }
     #project-title-input::placeholder { color:#888; }
-    #project-title-label { display:block; font-weight:600; color:#e0e0e0; margin-bottom:6px; }
+    #project-title-label { display:inline-block; font-weight:600; color:#e0e0e0; margin:0 6px 0 0; }
     #project-title-input { box-shadow: 0 0 0 1px #444 inset; }
     /* Titre affiché (centré) au-dessus des sections */
-    .project-title-display {
-        text-align: center;
-        font-size: 1.8em;
-        font-weight: 800;
-        margin: 8px 0 16px;
-        letter-spacing: 0.2px;
-        color: #eaeaea;
-    }
     </style>
     <!-- Firebase (compat) for simple in-page usage -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -356,11 +348,9 @@
   </div>
 
   <div id="project-header">
-    <label for="project-title-input" id="project-title-label">Nom du projet</label>
+    <label for="project-title-input" id="project-title-label">Nom du projet&nbsp;:</label>
     <input id="project-title-input" type="text" placeholder="TITRE">
   </div>
-
-  <div id="project-title-display" class="project-title-display">TITRE</div>
   
     <!-- Section des Catégories -->
     <div class="section" id="categories-section">
@@ -675,8 +665,6 @@ function renderTitle() {
     const titleText = projectTitle || 'TITRE';
     const ti = document.getElementById('project-title-input');
     if (ti) ti.value = titleText;
-    const td = document.getElementById('project-title-display');
-    if (td) td.textContent = titleText;
 }
 
 // Expose explicitement les fonctions pour Raccourcis (WebView / Safari)
