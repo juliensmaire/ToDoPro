@@ -426,6 +426,7 @@
             <textarea id="sync-box" placeholder="Copier ou coller ici pour sauvegarder/restaurer..." style="width:100%;height:100px;background-color:#1e1e1e;color:#e0e0e0;border:1px solid #333;padding:10px;box-sizing:border-box;"></textarea>
             <button id="copy-btn">Sélectionner</button>
             <button id="share-link-btn">Copier le lien du projet</button>
+            <button id="change-project-btn">Changer de projet</button>
         </div>
     </div>
 
@@ -1693,6 +1694,30 @@ async function cloudSave(options) {
                 fallbackCopy(link);
                 alert('Lien du projet copié dans le presse-papiers !');
             }
+        });
+
+        // Changer de projet (saisir une nouvelle clé UUID v4)
+        document.getElementById('change-project-btn').addEventListener('click', function() {
+            var newKey = (window.prompt('Collez la clé du projet (UUID v4) :') || '').trim();
+            if (!newKey) return; // annulé
+            var UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            if (!UUID_V4.test(newKey)) {
+                alert('Clé invalide. Attendu : UUID v4 (xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx).');
+                return;
+            }
+            try {
+                localStorage.setItem('FB_SHARED_KEY', newKey);
+                try { localStorage.setItem(LS_FBKEY, newKey); } catch(_) {}
+            } catch(_) {}
+            window.FB_SHARED_KEY = newKey;
+            // Réinitialise l’écouteur si présent
+            if (window._fbUnsub) { try { window._fbUnsub(); } catch(_) {} }
+            fbDocRef = null;
+            setCloudStatus('changement de projet…');
+            // Réinitialise Firebase et recharge le cloud
+            initFirebase();
+            cloudLoad();
+            setCloudStatus('projet changé', 'ok');
         });
 
         document.getElementById('sync-box').addEventListener('input', function() {
