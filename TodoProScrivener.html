@@ -292,6 +292,34 @@
     }
     #cloud-status.ok { border-color: #2ecc71; color: #bff3cf; }
     #cloud-status.err { border-color: #e74c3c; color: #ffd3ce; }
+
+    /* Modal pour charger un autre projet */
+    .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+    .modal {
+        background: #1e1e1e;
+        border: 1px solid #333;
+        border-radius: 12px;
+        padding: 16px;
+        width: min(420px, 90vw);
+        color: #e0e0e0;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+    }
+    .modal h3 { margin: 0 0 8px; }
+    .modal p { margin: 0 0 12px; color: #bbb; }
+    .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+    .modal .error { color: #ff8a8a; display: none; font-size: 12px; margin-top: 6px; }
+    /* --- Titre du projet --- */
+    #project-header { display:flex; align-items:center; gap:10px; margin: 10px 0 16px; }
+    #project-title-input { font-size: 1.4em; font-weight: 600; background:#1e1e1e; color:#e0e0e0; border:1px solid #333; padding:6px 10px; border-radius:6px; width:100%; max-width: 600px; }
+    #project-title-input::placeholder { color:#888; }
     </style>
     <!-- Firebase (compat) for simple in-page usage -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -300,8 +328,26 @@
 <body>
 
     
+
     <div id="cloud-status" aria-live="polite">Cloud: non initialisé</div>
 
+  <div id="key-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="key-modal-title">
+    <div class="modal">
+      <h3 id="key-modal-title">Charger un autre projet</h3>
+      <p>Entrez la clé du projet (UUID v4) :</p>
+      <input type="text" id="key-input" placeholder="xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+      <div id="key-error" class="error">Clé invalide. Format attendu : UUID v4.</div>
+      <div class="actions">
+        <button id="key-cancel">Annuler</button>
+        <button id="key-confirm">Valider</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="project-header">
+    <input id="project-title-input" type="text" placeholder="TITRE">
+  </div>
+  
     <!-- Section des Catégories -->
     <div class="section" id="categories-section">
         <div class="section-header" id="categories-header">
@@ -426,7 +472,7 @@
             <textarea id="sync-box" placeholder="Copier ou coller ici pour sauvegarder/restaurer..." style="width:100%;height:100px;background-color:#1e1e1e;color:#e0e0e0;border:1px solid #333;padding:10px;box-sizing:border-box;"></textarea>
             <button id="copy-btn">Sélectionner</button>
             <button id="share-link-btn">Copier le lien du projet</button>
-            <button id="change-project-btn">Changer de projet</button>
+            <button id="load-project-btn">Charger un autre projet</button>
         </div>
     </div>
 
@@ -445,6 +491,7 @@
         let lastAction = null; // Pour stocker la dernière action effectuée
 let sortCriteria = []; // Pour stocker les critères de tri
 let canUseLocalStorage = false; // indicateur: localStorage utilisable
+let projectTitle = 'TITRE'; // Nom lisible du projet (affiché en haut)
 
 // === Auto-save vers Firebase (avec anti-spam) ===
 let autosaveTimer = null;
@@ -528,12 +575,14 @@ const LS_FBKEY = PROJECT_KEY ? `FB_SHARED_KEY:${PROJECT_KEY}` : 'FB_SHARED_KEY';
                 categories = data.categories || [];
                 sectionStates = data.sectionStates || {};
                 sortCriteria = data.sortCriteria || [];
+                projectTitle = data.projectTitle || 'TITRE';
             } catch (e) {
                 console.warn('Erreur chargement :', e);
                 tasks = [];
                 categories = [];
                 sectionStates = {};
                 sortCriteria = [];
+                projectTitle = 'TITRE';
             }
 
             if (!categories.some(cat => cat.name === 'Général')) {
@@ -543,7 +592,7 @@ const LS_FBKEY = PROJECT_KEY ? `FB_SHARED_KEY:${PROJECT_KEY}` : 'FB_SHARED_KEY';
 
 function saveData() {
     const syncTextarea = document.getElementById('sync-data');
-    const data = { tasks, categories, sectionStates, sortCriteria };
+    const data = { tasks, categories, sectionStates, sortCriteria, projectTitle };
     const jsonData = JSON.stringify(data, null, 2);
 
     // Écrit dans le <textarea> (compatibilité + export manuel)
@@ -571,14 +620,14 @@ function saveData() {
 
         function updateSyncBox() {
             const syncBox = document.getElementById('sync-box');
-            const data = { tasks, categories, sectionStates, sortCriteria };
+            const data = { tasks, categories, sectionStates, sortCriteria, projectTitle };
             syncBox.value = JSON.stringify(data, null, 2);
         }
 
 // === Synchronisation iCloud via Raccourcis ===
 // Renvoie l'état complet au format JSON (string)
 function todoGetState() {
-    const data = { tasks, categories, sectionStates, sortCriteria };
+    const data = { tasks, categories, sectionStates, sortCriteria, projectTitle };
     return JSON.stringify(data);
 }
 
@@ -590,6 +639,7 @@ function todoSetState(state) {
         categories = obj.categories || [];
         sectionStates = obj.sectionStates || {};
         sortCriteria = obj.sortCriteria || [];
+        projectTitle = obj.projectTitle || 'TITRE';
 
         // Persiste aussi dans localStorage / <textarea>
         saveData();
@@ -599,11 +649,18 @@ function todoSetState(state) {
         renderTasks();
         applySectionStates();
         updateSyncBox();
+        const ti = document.getElementById('project-title-input');
+        if (ti) ti.value = projectTitle || 'TITRE';
         return true;
     } catch (e) {
         console.warn('todoSetState: JSON invalide', e);
         return false;
     }
+}
+// Affiche le titre du projet dans l'input (idempotent)
+function renderTitle() {
+    const ti = document.getElementById('project-title-input');
+    if (ti) ti.value = projectTitle || 'TITRE';
 }
 
 // Expose explicitement les fonctions pour Raccourcis (WebView / Safari)
@@ -1696,28 +1753,60 @@ async function cloudSave(options) {
             }
         });
 
-        // Changer de projet (saisir une nouvelle clé UUID v4)
-        document.getElementById('change-project-btn').addEventListener('click', function() {
-            var newKey = (window.prompt('Collez la clé du projet (UUID v4) :') || '').trim();
-            if (!newKey) return; // annulé
-            var UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-            if (!UUID_V4.test(newKey)) {
-                alert('Clé invalide. Attendu : UUID v4 (xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx).');
-                return;
+        // --- Modal: Charger un autre projet ---
+        function showKeyModal() {
+            const m = document.getElementById('key-modal');
+            const input = document.getElementById('key-input');
+            const err = document.getElementById('key-error');
+            if (!m || !input || !err) return;
+            err.style.display = 'none';
+            input.value = '';
+            m.style.display = 'flex';
+            setTimeout(() => input.focus(), 0);
+        }
+        function hideKeyModal() {
+            const m = document.getElementById('key-modal');
+            if (m) m.style.display = 'none';
+        }
+        (function bindKeyModal(){
+            const input = document.getElementById('key-input');
+            const err = document.getElementById('key-error');
+            const cancelBtn = document.getElementById('key-cancel');
+            const confirmBtn = document.getElementById('key-confirm');
+            if (!input || !err || !cancelBtn || !confirmBtn) return;
+
+            function acceptKey(){
+                const newKey = String(input.value || '').trim();
+                const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+                if (!UUID_V4.test(newKey)) { err.style.display = 'block'; return; }
+
+                try {
+                    localStorage.setItem('FB_SHARED_KEY', newKey);
+                    try { localStorage.setItem(LS_FBKEY, newKey); } catch(_) {}
+                } catch(_) {}
+                window.FB_SHARED_KEY = newKey;
+
+                // Réinitialise l’écouteur si présent
+                if (window._fbUnsub) { try { window._fbUnsub(); } catch(_) {} }
+                fbDocRef = null;
+
+                setCloudStatus('changement de projet…');
+                initFirebase();
+                cloudLoad();
+                setCloudStatus('projet chargé', 'ok');
+                hideKeyModal();
             }
-            try {
-                localStorage.setItem('FB_SHARED_KEY', newKey);
-                try { localStorage.setItem(LS_FBKEY, newKey); } catch(_) {}
-            } catch(_) {}
-            window.FB_SHARED_KEY = newKey;
-            // Réinitialise l’écouteur si présent
-            if (window._fbUnsub) { try { window._fbUnsub(); } catch(_) {} }
-            fbDocRef = null;
-            setCloudStatus('changement de projet…');
-            // Réinitialise Firebase et recharge le cloud
-            initFirebase();
-            cloudLoad();
-            setCloudStatus('projet changé', 'ok');
+
+            confirmBtn.addEventListener('click', acceptKey);
+            input.addEventListener('keydown', function(e){ if (e.key === 'Enter') acceptKey(); });
+            cancelBtn.addEventListener('click', hideKeyModal);
+        })();
+
+        // Ouvre le modal depuis le bouton visible
+        document.getElementById('load-project-btn').addEventListener('click', function(){
+            const err = document.getElementById('key-error');
+            if (err) err.style.display = 'none';
+            showKeyModal();
         });
 
         document.getElementById('sync-box').addEventListener('input', function() {
@@ -1823,6 +1912,15 @@ async function cloudSave(options) {
                     button.classList.remove('active');
                 }
             });
+            renderTitle();
+            const titleInput = document.getElementById('project-title-input');
+            if (titleInput) {
+                titleInput.value = projectTitle || 'TITRE';
+                titleInput.addEventListener('input', function(){
+                    projectTitle = titleInput.value.trim() || 'TITRE';
+                    saveData();
+                });
+            }
         }
 
 
