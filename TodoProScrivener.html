@@ -494,6 +494,15 @@ const STORAGE_BASE = 'TodoProV1';
 const STORAGE_KEY = PROJECT_KEY ? `${STORAGE_BASE}:${PROJECT_KEY}` : STORAGE_BASE;
 const LS_FBKEY = PROJECT_KEY ? `FB_SHARED_KEY:${PROJECT_KEY}` : 'FB_SHARED_KEY';
 
+// === TEMPORAIRE : Fallback clé par défaut pour rétablir la todo immédiatement ===
+// (On retirera ceci quand on remettra des sécurités/clé par projet.)
+if (!window.FB_SHARED_KEY) {
+    window.FB_SHARED_KEY = PROJECT_KEY || (function(){
+        try { return localStorage.getItem(LS_FBKEY) || ''; } catch(_) { return ''; }
+    })() || '6f0dbd6b-13f2-4a9d-b9a4-1d3d9ac1c9f2';
+    try { localStorage.setItem(LS_FBKEY, window.FB_SHARED_KEY); } catch(_) {}
+}
+
         (function testLocalStorage() {
             try {
                 const t = '__ls_test__';
