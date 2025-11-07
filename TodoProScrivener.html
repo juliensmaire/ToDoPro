@@ -1092,6 +1092,11 @@ async function cloudSave(options) {
                     input.type = 'text';
                     input.className = 'category-name-input';
                     input.value = category.name;
+                    // Accessibilité + attributs pour le champ d'édition du nom de catégorie
+                    input.setAttribute('id', `edit-category-${index}`);
+                    input.setAttribute('name', 'category-name');
+                    input.setAttribute('aria-label', 'Nom de la catégorie (édition)');
+                    input.setAttribute('autocomplete', 'off');
                     li.replaceChild(input, nameSpan);
                     input.focus();
 
@@ -1416,6 +1421,10 @@ async function cloudSave(options) {
                     e.stopPropagation();
                     toggleTaskCompletion(task.id);
                 });
+                // Accessibilité pour la case à cocher de tâche
+                checkbox.id = `task-check-${task.id}`;
+                checkbox.name = 'task-completed';
+                checkbox.setAttribute('aria-label', `Marquer "${task.title}" comme complétée`);
 
                 // Titre de la tâche (édition en ligne)
                 const titleSpan = document.createElement('span');
@@ -1432,6 +1441,11 @@ async function cloudSave(options) {
                     input.type = 'text';
                     input.className = 'task-title-input';
                     input.value = task.title;
+                    // Accessibilité pour l'édition du titre de tâche
+                    input.setAttribute('id', `edit-title-${task.id}`);
+                    input.setAttribute('name', 'task-title');
+                    input.setAttribute('aria-label', 'Titre de la tâche');
+                    input.setAttribute('autocomplete', 'off');
                     taskHeader.replaceChild(input, titleSpan);
                     input.focus();
 
@@ -1554,6 +1568,12 @@ async function cloudSave(options) {
                     task.description = description.value;
                     saveData();
                 });
+                // Associe label ↔ textarea
+                const descId = 'desc_' + task.id;
+                description.id = descId;
+                description.name = 'task-description';
+                description.setAttribute('aria-label', 'Description de la tâche');
+                descriptionLabel.htmlFor = descId;
                 taskDetails.appendChild(descriptionLabel);
                 taskDetails.appendChild(description);
 
@@ -1569,6 +1589,10 @@ async function cloudSave(options) {
                     const subCheckbox = document.createElement('input');
                     subCheckbox.type = 'checkbox';
                     subCheckbox.checked = subtask.completed;
+                    // Accessibilité pour la case à cocher de sous-tâche
+                    subCheckbox.id = `sub-${task.id}-${index}`;
+                    subCheckbox.name = 'subtask-completed';
+                    subCheckbox.setAttribute('aria-label', `Sous-tâche : ${subtask.title || ''}`);
                     subCheckbox.addEventListener('change', function(e) {
                         e.stopPropagation();
                         subtask.completed = subCheckbox.checked;
@@ -1614,6 +1638,11 @@ async function cloudSave(options) {
                         input.type = 'text';
                         input.className = 'subtask-title-input';
                         input.value = subtask.title;
+                        // Accessibilité pour l'édition du titre de sous-tâche
+                        input.setAttribute('id', `edit-subtitle-${task.id}-${index}`);
+                        input.setAttribute('name', 'subtask-title');
+                        input.setAttribute('aria-label', 'Titre de la sous-tâche');
+                        input.setAttribute('autocomplete', 'off');
                         li.replaceChild(input, subSpan);
                         input.focus();
 
@@ -1642,6 +1671,10 @@ async function cloudSave(options) {
                 const newSubtaskInput = document.createElement('input');
                 newSubtaskInput.type = 'text';
                 newSubtaskInput.placeholder = 'Nouvelle sous-tâche';
+                // Accessibilité pour l'ajout de sous-tâche
+                newSubtaskInput.name = 'new-subtask';
+                newSubtaskInput.setAttribute('aria-label', 'Nouvelle sous-tâche');
+                newSubtaskInput.setAttribute('id', `new-subtask-${task.id}`);
 
                 const addSubtaskBtn = document.createElement('button');
                 addSubtaskBtn.textContent = 'Ajouter Sous-tâche';
@@ -1667,6 +1700,12 @@ async function cloudSave(options) {
                 const categoryLabel = document.createElement('label');
                 categoryLabel.textContent = 'Catégorie :';
                 const categorySelect = document.createElement('select');
+                // Associe label ↔ select Catégorie
+                const catId = 'cat_' + task.id;
+                categorySelect.id = catId;
+                categorySelect.name = 'task-category';
+                categorySelect.setAttribute('aria-label', 'Catégorie');
+                categoryLabel.htmlFor = catId;
                 categories.forEach(cat => {
                     const option = document.createElement('option');
                     option.value = cat.name;
@@ -1685,6 +1724,12 @@ async function cloudSave(options) {
                 const priorityLabel = document.createElement('label');
                 priorityLabel.textContent = 'Priorité :';
                 const prioritySelect = document.createElement('select');
+                // Associe label ↔ select Priorité
+                const prioId = 'prio_' + task.id;
+                prioritySelect.id = prioId;
+                prioritySelect.name = 'task-priority';
+                prioritySelect.setAttribute('aria-label', 'Priorité');
+                priorityLabel.htmlFor = prioId;
                 const priorities = ['low', 'medium', 'high'];
                 priorities.forEach(prio => {
                     const option = document.createElement('option');
@@ -1707,6 +1752,12 @@ async function cloudSave(options) {
                 dueDateInput.type = 'text'; // Champ texte pour la date
                 dueDateInput.value = task.dueDateDisplay || task.dueDate || '';
                 dueDateInput.placeholder = 'Ex: 31/12/2023 ou 20231231';
+                // Associe label ↔ input Date
+                const dueId = 'due_' + task.id;
+                dueDateInput.id = dueId;
+                dueDateInput.name = 'due-date';
+                dueDateInput.setAttribute('aria-label', "Date d'échéance");
+                dueDateLabel.htmlFor = dueId;
                 dueDateInput.addEventListener('change', function() {
                     const parsedDate = parseDate(dueDateInput.value);
                     if (parsedDate) {
