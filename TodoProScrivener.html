@@ -255,36 +255,15 @@
             margin-top: 8px;
         }
         .action-buttons button {
-            flex: 1 1 220px;                /* largeur homogène, responsive */
-            min-height: 42px;               /* hauteur confortable */
-            padding: 10px 14px;
-            border-radius: 8px;
-            background-color: #2a2a2a;
+            flex: 1 1 220px;           /* même largeur visuelle, responsive */
+            padding: 10px 14px;        /* plus confortables */
+            border-radius: 8px;        /* plus jolis */
+            background-color: #2a2a2a; 
             border: 1px solid #3a3a3a;
-            display: flex;                  /* pour espacer icône/texte proprement */
-            align-items: center;
-            justify-content: center;
-            gap: 8px;                       /* espace icône/texte */
-            font-weight: 600;
-            line-height: 1.1;
-            transition: background-color .15s ease, transform .05s ease, box-shadow .15s ease;
         }
-        .action-buttons button .icon {
-            font-size: 1.1em;
-            line-height: 1;
-            transform: translateY(0.5px);   /* léger alignement vertical visuel */
-            pointer-events: none;
+        .action-buttons button:hover {
+            background-color: #383838;
         }
-        .action-buttons button .label { pointer-events: none; }
-        .action-buttons button:hover { background-color: #383838; }
-        .action-buttons button:active { transform: translateY(1px); }
-        .action-buttons button:focus { outline: none; box-shadow: 0 0 0 2px #555 inset; }
-        .action-buttons button[disabled] {
-            opacity: 0.6;
-            cursor: not-allowed;
-            filter: grayscale(20%);
-        }
-        #global-actions { margin-top: 8px; }
 
         /* --- Catégories : vue compacte lorsque la section est repliée --- */
         #categories-section.collapsed #category-list {
@@ -519,10 +498,10 @@
 <!-- Boutons globaux (visibles même si la section est repliée) -->
 <div id="global-actions">
   <div class="action-buttons">
-    <button id="copy-btn"><span class="icon" aria-hidden="true">📋</span><span class="label">Sélectionner</span></button>
-    <button id="share-link-btn"><span class="icon" aria-hidden="true">🔗</span><span class="label">Copier le lien du projet</span></button>
-    <button id="reset-btn"><span class="icon" aria-hidden="true">♻️</span><span class="label">Réinitialiser la Liste</span></button>
-    <button id="undo-btn" disabled><span class="icon" aria-hidden="true">↩️</span><span class="label">Annuler la Dernière Action</span></button>
+    <button id="copy-btn">📋 Sélectionner</button>
+    <button id="share-link-btn">🔗 Copier le lien du projet</button>
+    <button id="reset-btn">♻️ Réinitialiser la Liste</button>
+    <button id="undo-btn" disabled>↩️ Annuler la Dernière Action</button>
   </div>
 </div>
 
