@@ -770,6 +770,111 @@ function celebrate() {
     setTimeout(() => { if (ov.parentNode) ov.parentNode.removeChild(ov); }, 1500);
 }
 
+function celebrateSubtasksNear(taskId) {
+    try {
+        if (typeof confetti === 'function') {
+            // Positionne l'origine près de la carte de la tâche
+            let x = 0.5, y = 0.3;
+            const el = document.querySelector(`[data-task-id="${taskId}"]`);
+            if (el) {
+                const r = el.getBoundingClientRect();
+                x = (r.left + r.width / 2) / window.innerWidth;
+                y = (r.top + r.height * 0.25) / window.innerHeight; // un peu au-dessus du centre
+            }
+            confetti({
+                particleCount: 45,
+                spread: 55,
+                startVelocity: 45,
+                scalar: 0.8,
+                origin: { x, y }
+            });
+            return;
+        }
+    } catch (_) {}
+
+    // Fallback léger : petite zone au-dessus de la carte (sans canvas-confetti)
+    const el = document.querySelector(`[data-task-id="${taskId}"]`);
+    const r = el ? el.getBoundingClientRect()
+                 : { left: window.innerWidth * 0.4, top: window.innerHeight * 0.2, width: 200, height: 40 };
+    const ov = document.createElement('div');
+    ov.style.position = 'fixed';
+    ov.style.pointerEvents = 'none';
+    ov.style.zIndex = '3000';
+    ov.style.left = r.left + 'px';
+    ov.style.top = r.top + 'px';
+    ov.style.width = r.width + 'px';
+    ov.style.height = Math.max(40, r.height) + 'px';
+    document.body.appendChild(ov);
+
+    for (let i = 0; i < 24; i++) {
+        const s = document.createElement('span');
+        s.textContent = '✨';
+        s.style.position = 'absolute';
+        s.style.left = (Math.random() * r.width) + 'px';
+        s.style.top = (Math.random() * r.height) + 'px';
+        s.style.opacity = '0';
+        s.style.transition = 'transform 0.8s ease, opacity 0.8s ease';
+        ov.appendChild(s);
+        requestAnimationFrame(() => {
+            s.style.opacity = '1';
+            s.style.transform = `translate(${(Math.random()*2-1)*50}px, ${(Math.random()*2-1)*70}px)`;
+        });
+    }
+    setTimeout(() => { if (ov.parentNode) ov.parentNode.removeChild(ov); }, 900);
+}
+
+function celebrateSubtaskClickNear(taskId) {
+    try {
+        if (typeof confetti === 'function') {
+            // Petite célébration localisée près de la carte (coin supérieur droit)
+            let x = 0.6, y = 0.25;
+            const el = document.querySelector(`[data-task-id="${taskId}"]`);
+            if (el) {
+                const r = el.getBoundingClientRect();
+                x = (r.left + r.width * 0.85) / window.innerWidth;
+                y = (r.top + r.height * 0.15) / window.innerHeight;
+            }
+            confetti({
+                particleCount: 18,
+                spread: 35,
+                startVelocity: 35,
+                scalar: 0.7,
+                origin: { x, y }
+            });
+            return;
+        }
+    } catch (_) {}
+
+    // Fallback léger (sans canvas-confetti) : petites étincelles localisées
+    const el = document.querySelector(`[data-task-id="${taskId}"]`);
+    const r = el ? el.getBoundingClientRect() : { left: window.innerWidth * 0.5, top: window.innerHeight * 0.25, width: 160, height: 30 };
+    const ov = document.createElement('div');
+    ov.style.position = 'fixed';
+    ov.style.pointerEvents = 'none';
+    ov.style.zIndex = '3000';
+    ov.style.left = (r.left + r.width * 0.7) + 'px';
+    ov.style.top = (r.top + r.height * 0.1) + 'px';
+    ov.style.width = Math.max(80, r.width * 0.3) + 'px';
+    ov.style.height = Math.max(30, r.height * 0.3) + 'px';
+    document.body.appendChild(ov);
+
+    for (let i = 0; i < 12; i++) {
+        const s = document.createElement('span');
+        s.textContent = '✨';
+        s.style.position = 'absolute';
+        s.style.left = (Math.random() * ov.clientWidth) + 'px';
+        s.style.top = (Math.random() * ov.clientHeight) + 'px';
+        s.style.opacity = '0';
+        s.style.transition = 'transform 0.6s ease, opacity 0.6s ease';
+        ov.appendChild(s);
+        requestAnimationFrame(() => {
+            s.style.opacity = '1';
+            s.style.transform = `translate(${(Math.random()*2-1)*30}px, ${(Math.random()*2-1)*40}px)`;
+        });
+    }
+    setTimeout(() => { if (ov.parentNode) ov.parentNode.removeChild(ov); }, 650);
+}
+
 // Affiche le titre du projet dans l'input et la zone centrée (idempotent)
 function renderTitle() {
     const titleText = projectTitle || 'TITRE';
@@ -1292,6 +1397,7 @@ async function cloudSave(options) {
 
             filteredTasks.forEach(task => {
                 const taskDiv = document.createElement('div');
+                taskDiv.setAttribute('data-task-id', String(task.id));
                 const categoryColor = categories.find(cat => cat.name === task.category)?.color || '#ffffff';
                 taskDiv.className = 'task priority-' + task.priority + (task.completed ? ' completed' : '');
                 taskDiv.style.borderLeftColor = categoryColor;
@@ -1464,10 +1570,29 @@ async function cloudSave(options) {
                     subCheckbox.type = 'checkbox';
                     subCheckbox.checked = subtask.completed;
                     subCheckbox.addEventListener('change', function() {
-                        subtask.completed = subCheckbox.checked;
-                        saveData();
-                        renderTasks();
-                    });
+    subtask.completed = subCheckbox.checked;
+
+    // Évalue l'état \"toutes les sous-tâches terminées\"
+    const hasSubs = Array.isArray(task.subtasks) && task.subtasks.length > 0;
+    const allDone = hasSubs && task.subtasks.every(st => !!st.completed);
+    const wasCelebrated = !!task.celebratedSubtasks;
+
+    // Met à jour le drapeau global (permet de réarmer si on décoche ensuite)
+    task.celebratedSubtasks = allDone;
+
+    saveData();
+    renderTasks();
+
+    // 1) Micro-confetti à chaque coche de sous-tâche (pas quand on décoche)
+    if (subCheckbox.checked) {
+        celebrateSubtaskClickNear(task.id);
+    }
+
+    // 2) Confetti localisés un peu plus marqués lorsque TOUT est complété (évite re-déclenchement)
+    if (allDone && !wasCelebrated) {
+        celebrateSubtasksNear(task.id);
+    }
+});
 
                     // Titre de la sous-tâche (édition en ligne)
                     const subSpan = document.createElement('span');
@@ -1516,17 +1641,18 @@ async function cloudSave(options) {
                 const addSubtaskBtn = document.createElement('button');
                 addSubtaskBtn.textContent = 'Ajouter Sous-tâche';
                 addSubtaskBtn.addEventListener('click', function() {
-                    const subtaskTitle = newSubtaskInput.value.trim();
-                    if (subtaskTitle) {
-                        task.subtasks.push({
-                            title: subtaskTitle,
-                            completed: false
-                        });
-                        saveData();
-                        renderTasks();
-                        newSubtaskInput.value = '';
-                    }
-                });
+    const subtaskTitle = newSubtaskInput.value.trim();
+    if (subtaskTitle) {
+        task.subtasks.push({
+            title: subtaskTitle,
+            completed: false
+        });
+        task.celebratedSubtasks = false; // réarmer la célébration des sous-tâches
+        saveData();
+        renderTasks();
+        newSubtaskInput.value = '';
+    }
+});
 
                 taskDetails.appendChild(newSubtaskInput);
                 taskDetails.appendChild(addSubtaskBtn);
