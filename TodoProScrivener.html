@@ -768,7 +768,17 @@ function checkProjectCompletion() {
     }
 }
 
+// === Effets visuels — désactivation automatique pour Scrivener/WebView legacy ===
+const FX_PARAM = new URLSearchParams(location.search).get('fx');
+const PREFERS_REDUCED = (typeof window.matchMedia === 'function') && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Heuristiques prudentes : WebView legacy (pas OffscreenCanvas/visualViewport) ou UA contenant "Scrivener"
+const IS_SCRIVENER = /\bScrivener\b/i.test(navigator.userAgent);
+const IS_POTENTIAL_LEGACY_WEBVIEW = !('OffscreenCanvas' in window) && !('visualViewport' in window);
+// Flag global : pas d'effets (canvas ou fallback) si on est en Scrivener, legacy, fx=off ou reduce-motion
+const NO_EFFECTS = (FX_PARAM === 'off') || PREFERS_REDUCED || IS_SCRIVENER || IS_POTENTIAL_LEGACY_WEBVIEW;
+
 function celebrate() {
+    if (typeof NO_EFFECTS !== 'undefined' && NO_EFFECTS) return;
     // Feux d’artifice via canvas-confetti si dispo, sinon petit fallback
     try {
         if (typeof confetti === 'function') {
@@ -815,6 +825,7 @@ function celebrate() {
 }
 
 function celebrateSubtasksNear(taskId) {
+    if (typeof NO_EFFECTS !== 'undefined' && NO_EFFECTS) return;
     try {
         if (typeof confetti === 'function') {
             // Positionne l'origine près de la carte de la tâche
@@ -868,6 +879,7 @@ function celebrateSubtasksNear(taskId) {
 }
 
 function celebrateSubtaskClickNear(taskId) {
+    if (typeof NO_EFFECTS !== 'undefined' && NO_EFFECTS) return;
     try {
         if (typeof confetti === 'function') {
             // Petite célébration localisée près de la carte (coin supérieur droit)
