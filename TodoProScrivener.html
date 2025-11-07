@@ -1569,30 +1569,35 @@ async function cloudSave(options) {
                     const subCheckbox = document.createElement('input');
                     subCheckbox.type = 'checkbox';
                     subCheckbox.checked = subtask.completed;
-                    subCheckbox.addEventListener('change', function() {
-    subtask.completed = subCheckbox.checked;
+                    subCheckbox.addEventListener('change', function(e) {
+                        e.stopPropagation();
+                        subtask.completed = subCheckbox.checked;
 
-    // Évalue l'état \"toutes les sous-tâches terminées\"
-    const hasSubs = Array.isArray(task.subtasks) && task.subtasks.length > 0;
-    const allDone = hasSubs && task.subtasks.every(st => !!st.completed);
-    const wasCelebrated = !!task.celebratedSubtasks;
+                        // Évalue l'état "toutes les sous-tâches terminées"
+                        const hasSubs = Array.isArray(task.subtasks) && task.subtasks.length > 0;
+                        const allDone = hasSubs && task.subtasks.every(st => !!st.completed);
+                        const wasCelebrated = !!task.celebratedSubtasks;
 
-    // Met à jour le drapeau global (permet de réarmer si on décoche ensuite)
-    task.celebratedSubtasks = allDone;
+                        // Met à jour le drapeau global (permet de réarmer si on décoche ensuite)
+                        task.celebratedSubtasks = allDone;
 
-    saveData();
-    renderTasks();
+                        // DEBUG minimal pour vérifier le déclenchement
+                        try { console.debug('[subtask-change]', { taskId: task.id, checked: subCheckbox.checked, allDone, wasCelebrated }); } catch(_) {}
 
-    // 1) Micro-confetti à chaque coche de sous-tâche (pas quand on décoche)
-    if (subCheckbox.checked) {
-        celebrateSubtaskClickNear(task.id);
-    }
+                        // 1) Micro-confetti à chaque coche de sous-tâche (pas quand on décoche)
+                        if (subCheckbox.checked) {
+                            try { celebrateSubtaskClickNear(task.id); } catch(_) {}
+                        }
 
-    // 2) Confetti localisés un peu plus marqués lorsque TOUT est complété (évite re-déclenchement)
-    if (allDone && !wasCelebrated) {
-        celebrateSubtasksNear(task.id);
-    }
-});
+                        // 2) Confetti localisés un peu plus marqués lorsque TOUT est complété (évite re-déclenchement)
+                        if (allDone && !wasCelebrated) {
+                            try { celebrateSubtasksNear(task.id); } catch(_) {}
+                        }
+
+                        // Ensuite seulement on persiste + re-render
+                        saveData();
+                        renderTasks();
+                    });
 
                     // Titre de la sous-tâche (édition en ligne)
                     const subSpan = document.createElement('span');
