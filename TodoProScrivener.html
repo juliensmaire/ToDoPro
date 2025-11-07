@@ -476,7 +476,6 @@
             <textarea id="sync-box" placeholder="Copier ou coller ici pour sauvegarder/restaurer..." style="width:100%;height:100px;background-color:#1e1e1e;color:#e0e0e0;border:1px solid #333;padding:10px;box-sizing:border-box;"></textarea>
             <button id="copy-btn">Sélectionner</button>
             <button id="share-link-btn">Copier le lien du projet</button>
-            <button id="load-project-btn">Charger un autre projet</button>
         </div>
     </div>
 
@@ -541,6 +540,7 @@ const _params = new URLSearchParams(location.search);
 const URL_KEY = _params.get('k');
 const IS_UUID = /^[a-f0-9-]{36}$/i.test(URL_KEY || '');
 const PROJECT_KEY = IS_UUID ? URL_KEY : null;
+const REQUIRE_KEY_IF_NO_QUERY = true; // si pas de ?k=..., on exige une clé via le modal
 
 const STORAGE_BASE = 'TodoProV1';
 const STORAGE_KEY = PROJECT_KEY ? `${STORAGE_BASE}:${PROJECT_KEY}` : STORAGE_BASE;
@@ -708,58 +708,55 @@ function ensureSharedKey() {
 
 let fbApp = null, db = null, fbDocRef = null;
 function initFirebase() {
-    // Priorité à la clé projet passée dans l'URL (?k=...)
-    if (PROJECT_KEY) {
+    const requireKey = REQUIRE_KEY_IF_NO_QUERY && !PROJECT_KEY;
+
+    // Seed depuis l’URL UNE SEULE FOIS (ne pas écraser une clé choisie via le modal)
+    if (!window.FB_SHARED_KEY && PROJECT_KEY) {
         window.FB_SHARED_KEY = PROJECT_KEY;
     }
-    // Toujours persiste la clé projet de l'URL dans localStorage pour les futurs lancements
-    if (PROJECT_KEY) {
-        try { localStorage.setItem('FB_SHARED_KEY', PROJECT_KEY); } catch(_) {}
-        try { localStorage.setItem(LS_FBKEY, PROJECT_KEY); } catch(_) {}
+
+    // Si on exige une clé et qu'on n'en a pas encore, on stoppe ici (le modal s’en chargera à l’étape 3)
+    if (requireKey && !window.FB_SHARED_KEY) {
+        setCloudStatus('clé requise', 'err', { persist: true });
+        return false;
     }
-    // Vérifie/charge la config et la clé; si manquantes, demande à l'utilisateur (1re fois)
-    let cfgOk = ensureFirebaseConfig();
-    let keyOk = ensureSharedKey();
-    // Pas de popup : on s'appuie sur FB_CONFIG codé en dur
-    cfgOk = ensureFirebaseConfig();
-    // Pas de popup : on s'appuie sur FB_SHARED_KEY fourni dans le code
-    keyOk = ensureSharedKey();
-    // Persist the constant shared key if not already present in localStorage and valid
-    if (!localStorage.getItem(LS_FBKEY) && window.FB_SHARED_KEY && window.FB_SHARED_KEY.length >= 20) {
-        localStorage.setItem(LS_FBKEY, window.FB_SHARED_KEY);
+
+    // Persiste uniquement la clé actuellement active (pas forcément celle de l’URL)
+    if (window.FB_SHARED_KEY) {
+        try { localStorage.setItem('FB_SHARED_KEY', window.FB_SHARED_KEY); } catch(_) {}
+        try { localStorage.setItem(LS_FBKEY, window.FB_SHARED_KEY); } catch(_) {}
     }
+
+    const cfgOk = ensureFirebaseConfig();
+    const keyOk = !!window.FB_SHARED_KEY;
+
     if (!cfgOk || !keyOk) {
         console.warn('Firebase non configuré: config/clé manquantes. Sauvegarde locale seulement.');
+        setCloudStatus('non configuré', 'err');
+        return false;
     }
+
     try {
-        if (!window.firebase || !window.FB_CONFIG || !window.FB_SHARED_KEY) {
-            console.warn('Firebase non configuré (scripts/config manquants).');
-            setCloudStatus('non configuré', 'err');
-            return false;
-        }
         fbApp = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(window.FB_CONFIG);
         db = firebase.firestore();
         fbDocRef = db.collection('todopro').doc(String(window.FB_SHARED_KEY));
-        // Écoute temps réel des changements depuis Firestore
-        try {
-            if (window._fbUnsub) { try { window._fbUnsub(); } catch(_){} }
-            window._fbUnsub = fbDocRef.onSnapshot(function(snap){
-                // Ignore les écritures locales (évite effet ping-pong)
-                if (snap.metadata && snap.metadata.hasPendingWrites) return;
-                if (!snap.exists) return;
-                const d = snap.data();
-                if (d && d.state) {
-                    suppressAutoSave = true; // n'écrit pas tout de suite après application
-                    todoSetState(d.state);
-                    // mise à jour reçue (silencieux)
-                }
-            }, function(err){
-                console.warn('onSnapshot erreur:', err);
-                setCloudStatus('écoute échouée (' + (err.code || err.message || 'inconnu') + ')', 'err');
-            });
-        } catch (e) {
-            console.warn('onSnapshot non initialisé:', e);
-        }
+
+        // (Re)branche l’écouteur temps réel sur le bon document
+        if (window._fbUnsub) { try { window._fbUnsub(); } catch(_) {} }
+        window._fbUnsub = fbDocRef.onSnapshot(function(snap){
+            // Ignore les écritures locales (évite l’effet ping-pong)
+            if (snap.metadata && snap.metadata.hasPendingWrites) return;
+            if (!snap.exists) return;
+            const d = snap.data();
+            if (d && d.state) {
+                suppressAutoSave = true; // évite une ré-écriture immédiate
+                todoSetState(d.state);
+            }
+        }, function(err){
+            console.warn('onSnapshot erreur:', err);
+            setCloudStatus('écoute échouée (' + (err.code || err.message || 'inconnu') + ')', 'err');
+        });
+
         setCloudStatus('connecté', 'ok');
         return true;
     } catch (e) {
@@ -1758,11 +1755,14 @@ async function cloudSave(options) {
         });
 
         // --- Modal: Charger un autre projet ---
-        function showKeyModal() {
+        let _keyModalForce = false; // quand true, la popup ne peut pas être fermée tant qu'une clé valide n'est pas fournie
+        function showKeyModal(force) {
+            _keyModalForce = !!force;
             const m = document.getElementById('key-modal');
             const input = document.getElementById('key-input');
             const err = document.getElementById('key-error');
             if (!m || !input || !err) return;
+            err.textContent = 'Clé invalide. Format attendu : UUID v4.';
             err.style.display = 'none';
             input.value = '';
             m.style.display = 'flex';
@@ -1779,15 +1779,17 @@ async function cloudSave(options) {
             const confirmBtn = document.getElementById('key-confirm');
             if (!input || !err || !cancelBtn || !confirmBtn) return;
 
-            function acceptKey(){
+            async function acceptKey(){
                 const newKey = String(input.value || '').trim();
                 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-                if (!UUID_V4.test(newKey)) { err.style.display = 'block'; return; }
+                if (!UUID_V4.test(newKey)) { 
+                    err.textContent = 'Clé invalide. Format attendu : UUID v4.';
+                    err.style.display = 'block'; 
+                    return; 
+                }
 
-                try {
-                    localStorage.setItem('FB_SHARED_KEY', newKey);
-                    try { localStorage.setItem(LS_FBKEY, newKey); } catch(_) {}
-                } catch(_) {}
+                try { localStorage.setItem('FB_SHARED_KEY', newKey); } catch(_) {}
+                try { localStorage.setItem(LS_FBKEY, newKey); } catch(_) {}
                 window.FB_SHARED_KEY = newKey;
 
                 // Réinitialise l’écouteur si présent
@@ -1795,23 +1797,39 @@ async function cloudSave(options) {
                 fbDocRef = null;
 
                 setCloudStatus('changement de projet…');
-                initFirebase();
-                cloudLoad();
+                const ok = initFirebase();
+                if (!ok || !fbDocRef) {
+                    err.textContent = "Impossible d’initier le projet (clé invalide ou non autorisée).";
+                    err.style.display = 'block';
+                    return;
+                }
+                try {
+                    // Test de lecture: déclenchera une erreur si la clé n'est pas autorisée par les règles
+                    await fbDocRef.get();
+                } catch (e) {
+                    err.textContent = 'Clé non autorisée ou inexistante dans Firestore.';
+                    err.style.display = 'block';
+                    setCloudStatus('permission refusée', 'err', { persist: true });
+                    return;
+                }
+
+                await cloudLoad();
                 setCloudStatus('projet chargé', 'ok');
                 hideKeyModal();
             }
 
             confirmBtn.addEventListener('click', acceptKey);
             input.addEventListener('keydown', function(e){ if (e.key === 'Enter') acceptKey(); });
-            cancelBtn.addEventListener('click', hideKeyModal);
+            cancelBtn.addEventListener('click', function(){
+                if (_keyModalForce) {
+                    err.textContent = 'Une clé valide est requise pour continuer.';
+                    err.style.display = 'block';
+                    return;
+                }
+                hideKeyModal();
+            });
         })();
 
-        // Ouvre le modal depuis le bouton visible
-        document.getElementById('load-project-btn').addEventListener('click', function(){
-            const err = document.getElementById('key-error');
-            if (err) err.style.display = 'none';
-            showKeyModal();
-        });
 
         document.getElementById('sync-box').addEventListener('input', function() {
             try {
@@ -1901,9 +1919,13 @@ async function cloudSave(options) {
             applySectionStates();
             disableUndoButton();
             updateSyncBox();
-            // Initialise Firebase (si config présente) puis charge l'état partagé
-            initFirebase();
-            cloudLoad();
+            // Initialise Firebase seulement si une clé est disponible, sinon affiche le modal
+            if (!PROJECT_KEY && REQUIRE_KEY_IF_NO_QUERY && !window.FB_SHARED_KEY) {
+                showKeyModal(true);
+            } else {
+                initFirebase();
+                cloudLoad();
+            }
             // Initialiser la prévisualisation de la couleur sélectionnée
             document.getElementById('new-category-color').dispatchEvent(new Event('change'));
 
