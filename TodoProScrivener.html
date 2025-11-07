@@ -627,7 +627,7 @@ function setCloudStatus(text, cls, opts) {
         // Multi-projet : clé projet depuis l'URL (?k=UUID) → isole Firestore et localStorage par projet
 const _params = new URLSearchParams(location.search);
 const URL_KEY = _params.get('k');
-const IS_UUID = /^[a-f0-9-]{36}$/i.test(URL_KEY || '');
+const IS_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(URL_KEY || '');
 const PROJECT_KEY = IS_UUID ? URL_KEY : null;
 const REQUIRE_KEY_IF_NO_QUERY = true; // si pas de ?k=..., on exige une clé via le modal
 
@@ -737,8 +737,6 @@ function todoSetState(state) {
         sectionStates = obj.sectionStates || {};
         sortCriteria = obj.sortCriteria || [];
         projectTitle = obj.projectTitle || 'TITRE';
-        projectCelebrated = !!obj.projectCelebrated;
-        projectCompletedAt = obj.projectCompletedAt || null;
 
         // Persiste aussi dans localStorage / <textarea>
         saveData();
@@ -1088,6 +1086,16 @@ async function cloudSave(options) {
         setCloudStatus('sauvegarde…');
         const stateStr = todoGetState();
         const stateObj = JSON.parse(stateStr);
+
+        // ⚠️ Ne pas persister les drapeaux éphémères côté client
+        try {
+            delete stateObj.projectCelebrated;
+            delete stateObj.projectCompletedAt;
+            if (Array.isArray(stateObj.tasks)) {
+                stateObj.tasks.forEach(t => { if (t) delete t.celebratedSubtasks; });
+            }
+        } catch (_) {}
+
         await fbDocRef.set({
             state: stateObj,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1112,10 +1120,12 @@ async function cloudSave(options) {
                         categories = data.categories || [];
                         sectionStates = data.sectionStates || {};
                         sortCriteria = data.sortCriteria || [];
+                        projectTitle = data.projectTitle || 'TITRE';
                         renderCategories();
                         renderTasks();
                         applySectionStates();
                         updateSyncBox();
+                        renderTitle();
                     } catch (_) {}
                 }
             });
@@ -1213,7 +1223,11 @@ async function cloudSave(options) {
                     });
                 });
 
-                // Bouton Supprimer (sauf pour la catégorie 'Général')
+                // Ordre visuel : d'abord le handle et le nom…
+                li.appendChild(handle);
+                li.appendChild(nameSpan);
+
+                // …puis le bouton Supprimer (sauf pour 'Général')
                 if (category.name !== 'Général') {
                     const deleteCategoryBtn = document.createElement('button');
                     deleteCategoryBtn.textContent = 'Supprimer';
@@ -1222,9 +1236,6 @@ async function cloudSave(options) {
                     });
                     li.appendChild(deleteCategoryBtn);
                 }
-
-                li.appendChild(handle);
-                li.appendChild(nameSpan);
 
                 categoryList.appendChild(li);
             });
@@ -1369,7 +1380,7 @@ async function cloudSave(options) {
         });
 
         // Ajouter une tâche
-        document.getElementById('add-task-btn').addEventListener('click', function() {
+document.getElementById('add-task-btn').addEventListener('click', function() {
   const title = document.getElementById('task-title').value.trim();
   const priority = document.getElementById('task-priority').value;
   const categoryName = document.getElementById('task-category').value;
@@ -1387,6 +1398,11 @@ async function cloudSave(options) {
       expanded: false
     };
     tasks.push(task);
+    // Si le projet était marqué comme “fêté”, on le réarme
+    if (projectCelebrated) {
+        projectCelebrated = false;
+        projectCompletedAt = null;
+    }
     saveData();
     renderTasks();
     checkProjectCompletion();   // ← ajouté
