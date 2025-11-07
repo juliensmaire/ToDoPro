@@ -1935,29 +1935,40 @@ async function cloudSave(options) {
                 { sectionId: 'categories-section', toggleId: 'categories-toggle' },   
                 { sectionId: 'add-task-section', toggleId: 'add-task-toggle' },
                 { sectionId: 'filters-section', toggleId: 'filters-toggle' },
-                { sectionId: 'tasks-section', toggleId: 'tasks-toggle' }
-</script>
-// --- Bootstrap initial ---
-(function bootstrapTodo(){
-    try {
-        // Prépare l’UI locale
-        loadData();
-        renderCategories();
-        renderTasks();
-        applySectionStates && applySectionStates();
-        renderTitle && renderTitle();
-        updateSyncBox && updateSyncBox();
+                { sectionId: 'tasks-section', toggleId: 'tasks-toggle' },
+                { sectionId: 'import-export-section', toggleId: 'import-export-toggle' },
+            ];
 
-        // Si pas de ?k= et clé requise → affiche le modal (on ignore toute clé mémorisée)
-        if (REQUIRE_KEY_IF_NO_QUERY && !PROJECT_KEY) {
-            showKeyModal(true);
-            return;
+            sections.forEach(section => {
+                const sectionElement = document.getElementById(section.sectionId);
+                const header = sectionElement.querySelector('.section-header');
+                const toggleIcon = document.getElementById(section.toggleId);
+
+                // Appliquer l'état initial de la section
+                if (sectionStates[section.sectionId] === false) {
+                    sectionElement.classList.add('collapsed');
+                    toggleIcon.textContent = '►';
+                } else {
+                    sectionElement.classList.remove('collapsed');
+                    toggleIcon.textContent = '▼';
+                }
+
+                header.addEventListener('click', function() {
+                    sectionElement.classList.toggle('collapsed');
+                    const isCollapsed = sectionElement.classList.contains('collapsed');
+                    toggleIcon.textContent = isCollapsed ? '►' : '▼';
+
+                    // Sauvegarder l'état de la section
+                    sectionStates[section.sectionId] = !isCollapsed;
+                    saveData();
+                });
+            });
         }
 
-        // Sinon on initialise Firebase et on charge le cloud
-        initFirebase();
-        cloudLoad();
-    } catch (e) {
-        console.warn('Bootstrap init error:', e);
-    }
-})();
+        // Appliquer les états des sections au chargement
+        function applySectionStates() {
+            const sections = [
+                { sectionId: 'categories-section', toggleId: 'categories-toggle' },
+                { sectionId: 'color-codes-section', toggleId: 'color-codes-toggle' },
+                { sectionId: 'add-task-section', toggleId: 'add-task-toggle' },
+        <truncated__content/>
