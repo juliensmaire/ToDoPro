@@ -1929,21 +1929,11 @@ async function cloudSave(options) {
             }
         });
 
-        // Gestion des sections repliables
-        function setupCollapsibleSections() {
-            const sections = [
-                { sectionId: 'categories-section', toggleId: 'categories-toggle' },   
-                { sectionId: 'add-task-section', toggleId: 'add-task-toggle' },
-                { sectionId: 'filters-section', toggleId: 'filters-toggle' },
-                { sectionId: 'tasks-section', toggleId: 'tasks-toggle' }
-            ];
-            // ... rest of function (truncated)
-        }
-
-// --- Bootstrap initial ---
-(function bootstrapTodo(){
+</script>
+// --- Bootstrap on window load (robuste) ---
+window.addEventListener('load', function(){
     try {
-        // Prépare l’UI locale (toujours, pour ne pas se retrouver avec une page vide)
+        // Prépare l’UI locale (toujours, pour éviter une page vide)
         loadData();
         renderCategories();
         renderTasks();
@@ -1962,5 +1952,8 @@ async function cloudSave(options) {
         cloudLoad();
     } catch (e) {
         console.warn('Bootstrap init error:', e);
+        if (typeof setCloudStatus === 'function') {
+            setCloudStatus('init erreur', 'err', { persist: true });
+        }
     }
-})();
+});
