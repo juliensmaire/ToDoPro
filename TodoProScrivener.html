@@ -519,7 +519,7 @@
 <!-- Boutons globaux (visibles même si la section est repliée) -->
 <div id="global-actions">
   <div class="action-buttons">
-    <button id="copy-btn"><span class="icon" aria-hidden="true">📋</span><span class="label">Sélectionner</span></button>
+    <button id="copy-btn"><span class="icon" aria-hidden="true">📄</span><span class="label">Copier le projet (JSON)</span></button>
     <button id="share-link-btn"><span class="icon" aria-hidden="true">🔗</span><span class="label">Copier le lien du projet</span></button>
     <button id="reset-btn"><span class="icon" aria-hidden="true">♻️</span><span class="label">Réinitialiser la Liste</span></button>
     <button id="undo-btn" disabled><span class="icon" aria-hidden="true">↩️</span><span class="label">Annuler la Dernière Action</span></button>
@@ -1762,10 +1762,34 @@ async function cloudSave(options) {
 
         // Gestion du champ de synchronisation unique (export/import)
         document.getElementById('copy-btn').addEventListener('click', function() {
-            const syncBox = document.getElementById('sync-box');
-            syncBox.focus();
-            syncBox.select();
-            alert("Texte sélectionné. Appuyez sur Cmd+C (ou Ctrl+C) pour copier.");
+            try {
+                const json = typeof todoGetState === 'function' ? todoGetState() : document.getElementById('sync-box').value || '';
+
+                function fallbackCopy(text) {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    try { document.execCommand('copy'); } catch (_) {}
+                    document.body.removeChild(ta);
+                }
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(json).then(() => {
+                        alert('Projet (JSON) copié dans le presse-papiers ✅');
+                    }).catch(() => {
+                        fallbackCopy(json);
+                        alert('Projet (JSON) copié dans le presse-papiers ✅');
+                    });
+                } else {
+                    fallbackCopy(json);
+                    alert('Projet (JSON) copié dans le presse-papiers ✅');
+                }
+            } catch (e) {
+                console.warn('Copie JSON échouée:', e);
+                alert("Impossible de copier automatiquement. Sélectionnez manuellement le contenu de la zone et copiez-le.");
+            }
         });
 
         // Copier le lien du projet (inclut ?k=<clé>)
