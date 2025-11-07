@@ -669,8 +669,9 @@ const LS_FBKEY = PROJECT_KEY ? `FB_SHARED_KEY:${PROJECT_KEY}` : 'FB_SHARED_KEY';
                 sectionStates = data.sectionStates || {};
                 sortCriteria = data.sortCriteria || [];
                 projectTitle = data.projectTitle || 'TITRE';
-                projectCelebrated = !!data.projectCelebrated;
-                projectCompletedAt = data.projectCompletedAt || null;
+                // Ne pas restaurer les drapeaux éphémères depuis le stockage local
+                projectCelebrated = false;
+                projectCompletedAt = null;
             } catch (e) {
                 console.warn('Erreur chargement :', e);
                 tasks = [];
