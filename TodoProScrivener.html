@@ -366,6 +366,7 @@
     <!-- Firebase (compat) for simple in-page usage -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 </head>
 <body>
 
@@ -538,6 +539,8 @@
 let sortCriteria = []; // Pour stocker les critères de tri
 let canUseLocalStorage = false; // indicateur: localStorage utilisable
 let projectTitle = 'TITRE'; // Nom lisible du projet (affiché en haut)
+let projectCelebrated = false;      // évite de rejouer le feu d’artifice
+let projectCompletedAt = null;      // date ISO quand le projet est terminé
 
 // === Auto-save vers Firebase (avec anti-spam) ===
 let autosaveTimer = null;
@@ -623,6 +626,8 @@ const LS_FBKEY = PROJECT_KEY ? `FB_SHARED_KEY:${PROJECT_KEY}` : 'FB_SHARED_KEY';
                 sectionStates = data.sectionStates || {};
                 sortCriteria = data.sortCriteria || [];
                 projectTitle = data.projectTitle || 'TITRE';
+                projectCelebrated = !!data.projectCelebrated;
+                projectCompletedAt = data.projectCompletedAt || null;
             } catch (e) {
                 console.warn('Erreur chargement :', e);
                 tasks = [];
@@ -630,6 +635,8 @@ const LS_FBKEY = PROJECT_KEY ? `FB_SHARED_KEY:${PROJECT_KEY}` : 'FB_SHARED_KEY';
                 sectionStates = {};
                 sortCriteria = [];
                 projectTitle = 'TITRE';
+                projectCelebrated = false;
+                projectCompletedAt = null;
             }
 
             if (!categories.some(cat => cat.name === 'Général')) {
@@ -639,7 +646,7 @@ const LS_FBKEY = PROJECT_KEY ? `FB_SHARED_KEY:${PROJECT_KEY}` : 'FB_SHARED_KEY';
 
 function saveData() {
     const syncTextarea = document.getElementById('sync-data');
-    const data = { tasks, categories, sectionStates, sortCriteria, projectTitle };
+    const data = { tasks, categories, sectionStates, sortCriteria, projectTitle, projectCelebrated, projectCompletedAt };
     const jsonData = JSON.stringify(data, null, 2);
 
     // Écrit dans le <textarea> (compatibilité + export manuel)
@@ -667,14 +674,14 @@ function saveData() {
 
         function updateSyncBox() {
             const syncBox = document.getElementById('sync-box');
-            const data = { tasks, categories, sectionStates, sortCriteria, projectTitle };
+            const data = { tasks, categories, sectionStates, sortCriteria, projectTitle, projectCelebrated, projectCompletedAt };
             syncBox.value = JSON.stringify(data, null, 2);
         }
 
 // === Synchronisation iCloud via Raccourcis ===
 // Renvoie l'état complet au format JSON (string)
 function todoGetState() {
-    const data = { tasks, categories, sectionStates, sortCriteria, projectTitle };
+    const data = { tasks, categories, sectionStates, sortCriteria, projectTitle, projectCelebrated, projectCompletedAt };
     return JSON.stringify(data);
 }
 
@@ -687,6 +694,8 @@ function todoSetState(state) {
         sectionStates = obj.sectionStates || {};
         sortCriteria = obj.sortCriteria || [];
         projectTitle = obj.projectTitle || 'TITRE';
+        projectCelebrated = !!obj.projectCelebrated;
+        projectCompletedAt = obj.projectCompletedAt || null;
 
         // Persiste aussi dans localStorage / <textarea>
         saveData();
@@ -703,6 +712,64 @@ function todoSetState(state) {
         return false;
     }
 }
+
+function checkProjectCompletion() {
+    // Projet terminé si AU MOINS 1 tâche et que TOUT est complété
+    const allCompleted = tasks.length > 0 && tasks.every(t => !!t.completed);
+    if (allCompleted && !projectCelebrated) {
+        projectCelebrated = true;
+        projectCompletedAt = new Date().toISOString();
+        saveData();   // persiste et synchronise (debounce)
+        celebrate();  // lance l’animation
+    }
+}
+
+function celebrate() {
+    // Feux d’artifice via canvas-confetti si dispo, sinon petit fallback
+    try {
+        if (typeof confetti === 'function') {
+            const duration = 2000;
+            const end = Date.now() + duration;
+            (function frame() {
+                confetti({
+                    particleCount: 7,
+                    startVelocity: 40,
+                    spread: 360,
+                    ticks: 120,
+                    origin: { x: Math.random(), y: Math.random() * 0.4 + 0.1 }
+                });
+                if (Date.now() < end) requestAnimationFrame(frame);
+            })();
+            return;
+        }
+    } catch (_) {}
+
+    // Fallback léger sans lib
+    const ov = document.createElement('div');
+    ov.style.position = 'fixed';
+    ov.style.inset = '0';
+    ov.style.pointerEvents = 'none';
+    ov.style.zIndex = '3000';
+    document.body.appendChild(ov);
+
+    for (let i = 0; i < 80; i++) {
+        const s = document.createElement('span');
+        s.textContent = '✨';
+        s.style.position = 'absolute';
+        s.style.left = Math.random() * 100 + '%';
+        s.style.top = Math.random() * 50 + '%';
+        s.style.fontSize = (10 + Math.random() * 18) + 'px';
+        s.style.opacity = '0';
+        s.style.transition = 'transform 1.2s ease, opacity 1.2s ease';
+        ov.appendChild(s);
+        requestAnimationFrame(() => {
+            s.style.opacity = '1';
+            s.style.transform = `translate(${(Math.random()*2-1)*120}px, ${(Math.random()*2-1)*160}px) scale(0.9)`;
+        });
+    }
+    setTimeout(() => { if (ov.parentNode) ov.parentNode.removeChild(ov); }, 1500);
+}
+
 // Affiche le titre du projet dans l'input et la zone centrée (idempotent)
 function renderTitle() {
     const titleText = projectTitle || 'TITRE';
@@ -1114,28 +1181,29 @@ async function cloudSave(options) {
 
         // Ajouter une tâche
         document.getElementById('add-task-btn').addEventListener('click', function() {
-            const title = document.getElementById('task-title').value.trim();
-            const priority = document.getElementById('task-priority').value;
-            const categoryName = document.getElementById('task-category').value;
-            if (title) {
-                const task = {
-                    id: Date.now(),
-                    title,
-                    priority,
-                    category: categoryName,
-                    completed: false,
-                    completionDate: null,
-                    description: '',
-                    subtasks: [],
-                    dueDate: '',
-                    expanded: false // Indique si la tâche est dépliée ou non
-                };
-                tasks.push(task);
-                saveData();
-                renderTasks();
-                document.getElementById('task-title').value = '';
-            }
-        });
+  const title = document.getElementById('task-title').value.trim();
+  const priority = document.getElementById('task-priority').value;
+  const categoryName = document.getElementById('task-category').value;
+  if (title) {
+    const task = {
+      id: Date.now(),
+      title,
+      priority,
+      category: categoryName,
+      completed: false,
+      completionDate: null,
+      description: '',
+      subtasks: [],
+      dueDate: '',
+      expanded: false
+    };
+    tasks.push(task);
+    saveData();
+    renderTasks();
+    checkProjectCompletion();   // ← ajouté
+    document.getElementById('task-title').value = '';
+  }
+});
 
         // Fonction pour parser les dates
         function parseDate(input) {
@@ -1545,6 +1613,7 @@ async function cloudSave(options) {
                     tasks = tasks.filter(t => t.id !== task.id);
                     saveData();
                     renderTasks();
+                    checkProjectCompletion();
                 });
 
                 taskDetails.appendChild(deleteTaskBtn);
@@ -1625,14 +1694,15 @@ async function cloudSave(options) {
 
         // Basculer l'état de complétion d'une tâche
         function toggleTaskCompletion(taskId) {
-            const task = tasks.find(t => t.id === taskId);
-            if (task) {
-                task.completed = !task.completed;
-                task.completionDate = task.completed ? new Date().toISOString() : null;
-                saveData();
-                renderTasks();
-            }
-        }
+  const task = tasks.find(t => t.id === taskId);
+  if (task) {
+    task.completed = !task.completed;
+    task.completionDate = task.completed ? new Date().toISOString() : null;
+    saveData();
+    renderTasks();
+    checkProjectCompletion();   // ← ajouté
+  }
+}
 
         // Filtrer les tâches par statut
         document.querySelectorAll('[data-filter]').forEach(button => {
