@@ -770,12 +770,9 @@ function checkProjectCompletion() {
 
 // === Effets visuels — désactivation automatique pour Scrivener/WebView legacy ===
 const FX_PARAM = new URLSearchParams(location.search).get('fx');
-const PREFERS_REDUCED = (typeof window.matchMedia === 'function') && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-// Heuristiques prudentes : WebView legacy (pas OffscreenCanvas/visualViewport) ou UA contenant "Scrivener"
-const IS_SCRIVENER = /\bScrivener\b/i.test(navigator.userAgent);
-const IS_POTENTIAL_LEGACY_WEBVIEW = !('OffscreenCanvas' in window) && !('visualViewport' in window);
-// Flag global : pas d'effets (canvas ou fallback) si on est en Scrivener, legacy, fx=off ou reduce-motion
-const NO_EFFECTS = (FX_PARAM === 'off') || PREFERS_REDUCED || IS_SCRIVENER || IS_POTENTIAL_LEGACY_WEBVIEW;
+// Sécurité maximale: pas d'effets par défaut PARTOUT (Scrivener inclus),
+// sauf si on demande explicitement fx=on dans l'URL.
+const NO_EFFECTS = FX_PARAM !== 'on';
 
 function celebrate() {
     if (typeof NO_EFFECTS !== 'undefined' && NO_EFFECTS) return;
