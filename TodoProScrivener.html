@@ -749,6 +749,8 @@ function todoSetState(state) {
         applySectionStates();
         updateSyncBox();
         renderTitle();
+        // Vérifie si le projet doit déclencher/masquer le feu d’artifice après un chargement d’état
+        try { checkProjectCompletion(); } catch (_) {}
         return true;
     } catch (e) {
         console.warn('todoSetState: JSON invalide', e);
@@ -1883,6 +1885,25 @@ async function cloudSave(options) {
             });
         }
 
+function toggleTaskCompletion(taskId) {
+    const t = tasks.find(tt => String(tt.id) === String(taskId));
+    if (!t) return;
+
+    const wasCompleted = !!t.completed;
+    t.completed = !wasCompleted;
+    t.completionDate = t.completed ? new Date().toISOString() : null;
+
+    // Si on décoche une tâche, on réarme la célébration projet
+    if (!t.completed) {
+        projectCelebrated = false;
+        projectCompletedAt = null;
+    }
+
+    saveData();
+    renderTasks();
+    checkProjectCompletion();
+}
+
         // Fonction pour appliquer les filtres
         function applyFilters(taskArray) {
             let filteredTasks = [...taskArray];
@@ -2404,6 +2425,10 @@ async function cloudSave(options) {
                 cloudSave({ silent: true });
             }
         });
+        // Vérification au chargement (au cas où l’état initial est déjà “tout complété”)
+window.addEventListener('load', function(){
+    try { checkProjectCompletion(); } catch(_) {}
+});
 </script>
 
 </body></html>
