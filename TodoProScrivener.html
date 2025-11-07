@@ -498,7 +498,7 @@
 <!-- Boutons globaux (visibles même si la section est repliée) -->
 <div id="global-actions">
   <div class="action-buttons">
-    <button id="copy-btn">📋 Sélectionner</button>
+    <button id="copy-btn"><span class="icon" aria-hidden="true">📋</span><span class="label">Copier le projet (JSON)</span></button>
     <button id="share-link-btn">🔗 Copier le lien du projet</button>
     <button id="reset-btn">♻️ Réinitialiser la Liste</button>
     <button id="undo-btn" disabled>↩️ Annuler la Dernière Action</button>
@@ -565,9 +565,16 @@ const PROJECT_KEY = IS_UUID ? URL_KEY : null;
 const REQUIRE_KEY_IF_NO_QUERY = true; // si pas de ?k=..., on exige une clé via le modal
 
 const STORAGE_BASE = 'TodoProV1';
-const STORAGE_KEY = PROJECT_KEY ? `${STORAGE_BASE}:${PROJECT_KEY}` : STORAGE_BASE;
-const LS_FBKEY = PROJECT_KEY ? `FB_SHARED_KEY:${PROJECT_KEY}` : 'FB_SHARED_KEY';
+let STORAGE_KEY = (function(){
+    const initial = String(PROJECT_KEY || window.FB_SHARED_KEY || '').trim();
+    return initial ? `${STORAGE_BASE}:${initial}` : STORAGE_BASE;
+})();
+let LS_FBKEY = PROJECT_KEY ? `FB_SHARED_KEY:${PROJECT_KEY}` : 'FB_SHARED_KEY';
 
+function updateStorageKeyForActiveProject(){
+    const active = String(window.FB_SHARED_KEY || PROJECT_KEY || '').trim();
+    STORAGE_KEY = active ? `${STORAGE_BASE}:${active}` : STORAGE_BASE;
+}
 
         (function testLocalStorage() {
             try {
@@ -736,6 +743,7 @@ function initFirebase() {
     if (!window.FB_SHARED_KEY && PROJECT_KEY) {
         window.FB_SHARED_KEY = PROJECT_KEY;
     }
+    updateStorageKeyForActiveProject();
 
     // Si on exige une clé et qu'on n'en a pas encore, on stoppe ici (le modal s’en chargera à l’étape 3)
     if (requireKey && !window.FB_SHARED_KEY) {
@@ -833,7 +841,7 @@ async function cloudSave(options) {
         // Synchronisation inter-fenêtres si la page est ouverte ailleurs
         if (typeof window !== 'undefined') {
             window.addEventListener('storage', (e) => {
-                if (e.key === STORAGE_KEY && canUseLocalStorage) {
+                if (canUseLocalStorage && e.key === STORAGE_KEY) {
                     try {
                         const data = JSON.parse(e.newValue || '{}');
                         tasks = data.tasks || [];
@@ -1739,12 +1747,35 @@ async function cloudSave(options) {
         });
 
 
-        // Gestion du champ de synchronisation unique (export/import)
+        // Copier l'état du projet au format JSON directement dans le presse‑papiers
         document.getElementById('copy-btn').addEventListener('click', function() {
-            const syncBox = document.getElementById('sync-box');
-            syncBox.focus();
-            syncBox.select();
-            alert("Texte sélectionné. Appuyez sur Cmd+C (ou Ctrl+C) pour copier.");
+            try {
+                const json = todoGetState();
+                function fallbackCopy(text) {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.position = 'fixed';
+                    ta.style.top = '-1000px';
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    try { document.execCommand('copy'); } catch (_) {}
+                    document.body.removeChild(ta);
+                }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(json).then(() => {
+                        alert('Projet (JSON) copié dans le presse‑papiers !');
+                    }).catch(() => {
+                        fallbackCopy(json);
+                        alert('Projet (JSON) copié dans le presse‑papiers !');
+                    });
+                } else {
+                    fallbackCopy(json);
+                    alert('Projet (JSON) copié dans le presse‑papiers !');
+                }
+            } catch (e) {
+                alert('Impossible de copier le JSON.');
+            }
         });
 
         // Copier le lien du projet (inclut ?k=<clé>)
@@ -1813,6 +1844,7 @@ async function cloudSave(options) {
                 try { localStorage.setItem('FB_SHARED_KEY', newKey); } catch(_) {}
                 try { localStorage.setItem(LS_FBKEY, newKey); } catch(_) {}
                 window.FB_SHARED_KEY = newKey;
+                updateStorageKeyForActiveProject();
 
                 // Réinitialise l’écouteur si présent
                 if (window._fbUnsub) { try { window._fbUnsub(); } catch(_) {} }
@@ -1935,80 +1967,4 @@ async function cloudSave(options) {
                 { sectionId: 'categories-section', toggleId: 'categories-toggle' },
                 { sectionId: 'color-codes-section', toggleId: 'color-codes-toggle' },
                 { sectionId: 'add-task-section', toggleId: 'add-task-toggle' },
-                { sectionId: 'filters-section', toggleId: 'filters-toggle' },
-                { sectionId: 'tasks-section', toggleId: 'tasks-toggle' },
-                { sectionId: 'import-export-section', toggleId: 'import-export-toggle' },
-            ];
-
-            sections.forEach(section => {
-                const sectionElement = document.getElementById(section.sectionId);
-                const toggleIcon = document.getElementById(section.toggleId);
-
-                if (sectionElement && toggleIcon) {
-                    // Appliquer l'état enregistré
-                    if (sectionStates[section.sectionId] === false) {
-                        sectionElement.classList.add('collapsed');
-                        toggleIcon.textContent = '►';
-                    } else {
-                        sectionElement.classList.remove('collapsed');
-                        toggleIcon.textContent = '▼';
-                    }
-                }
-            });
-        }
-
-        // Initialisation
-        function init() {
-            loadData();
-            renderCategories();
-            renderTasks();
-            setupCollapsibleSections();
-            applySectionStates();
-            disableUndoButton();
-            updateSyncBox();
-            // Initialise Firebase seulement si une clé est disponible, sinon affiche le modal
-            if (!PROJECT_KEY && REQUIRE_KEY_IF_NO_QUERY && !window.FB_SHARED_KEY) {
-                showKeyModal(true);
-            } else {
-                initFirebase();
-                cloudLoad();
-            }
-            // Initialiser la prévisualisation de la couleur sélectionnée
-            document.getElementById('new-category-color').dispatchEvent(new Event('change'));
-
-            // Réinitialiser les boutons de tri
-            document.querySelectorAll('.sort-button').forEach(button => {
-                const criterion = button.getAttribute('data-sort');
-                if (sortCriteria.includes(criterion)) {
-                    button.classList.add('active');
-                } else {
-                    button.classList.remove('active');
-                }
-            });
-            renderTitle();
-            const titleInput = document.getElementById('project-title-input');
-            if (titleInput) {
-                titleInput.value = projectTitle || 'TITRE';
-                titleInput.addEventListener('input', function(){
-                    projectTitle = titleInput.value.trim() || 'TITRE';
-                    saveData();
-                });
-            }
-        }
-
-
-        // Attendre que le DOM soit chargé avant d'exécuter init()
-        document.addEventListener('DOMContentLoaded', function() {
-            init();
-        });
-
-        // Raccourci Cmd+S (Mac) et Ctrl+S (Windows/Linux) pour sauvegarde forcée silencieuse
-        window.addEventListener('keydown', function(e) {
-            if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) {
-                e.preventDefault();
-                cloudSave({ silent: true });
-            }
-        });
-</script>
-
-</body></html>
+        <truncated__content/>
