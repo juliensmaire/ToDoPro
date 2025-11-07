@@ -1813,6 +1813,31 @@ async function cloudSave(options) {
                     return;
                 }
 
+                // Si le document n'existe pas encore, on l'initialise automatiquement avec un état VIERGE
+                try {
+                    const snap = await fbDocRef.get();
+                    if (!snap.exists) {
+                        const initialState = {
+                            tasks: [],
+                            categories: [{ name: 'Général', color: '#ffffff' }],
+                            sectionStates: {},
+                            sortCriteria: [],
+                            projectTitle: 'TITRE'
+                        };
+                        await fbDocRef.set({
+                            state: initialState,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+                        // Applique localement sans relancer un auto-save immédiat
+                        suppressAutoSave = true;
+                        todoSetState(initialState);
+                        setCloudStatus('projet initialisé', 'ok');
+                    }
+                } catch (e) {
+                    console.warn('Initialisation projet échouée :', e);
+                    // On laisse continuer: cloudLoad() gérera l’affichage si possible
+                }
+
                 await cloudLoad();
                 setCloudStatus('projet chargé', 'ok');
                 hideKeyModal();
