@@ -113,10 +113,15 @@
             padding: 2px 5px;
             border-radius: 3px;
         }
-        .task-due-date {
+        .task-due-date,
+        .task-scheduled-date {
             margin-left: 10px;
             color: #e0e0e0;
             font-size: 0.9em;
+        }
+        .task-scheduled-date {
+            color: #a8d6e8;
+            white-space: nowrap;
         }
         .task-subtasks-count {
             margin-left: 10px;
@@ -136,7 +141,7 @@
             background-color: #444444;
         }
         /* Inputs */
-        input[type="text"], select, textarea {
+        input[type="text"], input[type="date"], input[type="time"], select, textarea {
             padding: 10px;
             margin-right: 10px;
             background-color: #1e1e1e;
@@ -170,6 +175,55 @@
             color: #e0e0e0;
             border: 1px solid #333333;
             outline: none;
+        }
+        .scheduled-fields {
+            border: 1px solid #333333;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #191919;
+        }
+        .scheduled-fields h4 {
+            margin: 0 0 8px;
+            color: #ffffff;
+        }
+        .scheduled-fields p {
+            margin: 0 0 10px;
+            color: #aaaaaa;
+            font-size: 0.9em;
+        }
+        .scheduled-input-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 130px;
+            gap: 10px;
+        }
+        .subtask-content {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 150px 110px;
+            gap: 8px;
+            align-items: center;
+            flex: 1;
+        }
+        .subtask-scheduled-label {
+            color: #a8d6e8;
+            font-size: 0.85em;
+            grid-column: 1 / -1;
+        }
+        .subtask-scheduled-date,
+        .subtask-scheduled-time {
+            padding: 6px;
+            margin: 0;
+            font-size: 0.85em;
+        }
+        @media (max-width: 700px) {
+            .task-header {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .scheduled-input-row,
+            .subtask-content {
+                grid-template-columns: 1fr;
+            }
         }
         /* Styles pour les catégories */
         .category-list {
@@ -712,6 +766,52 @@ function updateTopTabs() {
             }
         })();
 
+function isValidYmdDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
+    const parts = String(value).split('-');
+    const date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    return date.getFullYear() === Number(parts[0])
+        && date.getMonth() === Number(parts[1]) - 1
+        && date.getDate() === Number(parts[2]);
+}
+
+function isValidScheduledTime(value) {
+    return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || ''));
+}
+
+function normalizeSubtaskDates(subtask) {
+    subtask = subtask || {};
+    if (typeof subtask.title !== 'string') subtask.title = String(subtask.title || '');
+    subtask.completed = !!subtask.completed;
+    subtask.scheduledDate = isValidYmdDate(subtask.scheduledDate) ? subtask.scheduledDate : '';
+    subtask.scheduledTime = isValidScheduledTime(subtask.scheduledTime) ? subtask.scheduledTime : '';
+    return subtask;
+}
+
+function normalizeTaskDates(task) {
+    task = task || {};
+    task.scheduledDate = isValidYmdDate(task.scheduledDate) ? task.scheduledDate : '';
+    task.scheduledTime = isValidScheduledTime(task.scheduledTime) ? task.scheduledTime : '';
+    task.subtasks = Array.isArray(task.subtasks) ? task.subtasks.map(normalizeSubtaskDates) : [];
+    return task;
+}
+
+function normalizeTasksDates(taskArray) {
+    return Array.isArray(taskArray) ? taskArray.map(normalizeTaskDates) : [];
+}
+
+function formatYmdToFrenchDate(value) {
+    if (!isValidYmdDate(value)) return '';
+    const parts = String(value).split('-');
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function formatScheduledDateTime(date, time) {
+    const formattedDate = formatYmdToFrenchDate(date);
+    if (!formattedDate) return '';
+    return time ? `${formattedDate} ${time}` : formattedDate;
+}
+
         // Charger les données depuis le stockage (localStorage prioritaire, sinon <textarea> caché)
         function loadData() {
             const syncTextarea = document.getElementById('sync-data');
@@ -729,7 +829,7 @@ function updateTopTabs() {
 
             try {
                 const data = JSON.parse(jsonText || '{}');
-                tasks = data.tasks || [];
+                tasks = normalizeTasksDates(data.tasks || []);
                 categories = data.categories || [];
                 sectionStates = data.sectionStates || {};
                 sortCriteria = data.sortCriteria || [];
@@ -755,6 +855,7 @@ function updateTopTabs() {
 
 function saveData() {
     const syncTextarea = document.getElementById('sync-data');
+    tasks = normalizeTasksDates(tasks);
     const data = { tasks, categories, sectionStates, sortCriteria, projectTitle, projectCelebrated, projectCompletedAt };
     const jsonData = JSON.stringify(data, null, 2);
 
@@ -783,6 +884,7 @@ function saveData() {
 
         function updateSyncBox() {
             const syncBox = document.getElementById('sync-box');
+            tasks = normalizeTasksDates(tasks);
             const data = { tasks, categories, sectionStates, sortCriteria, projectTitle, projectCelebrated, projectCompletedAt };
             syncBox.value = JSON.stringify(data, null, 2);
         }
@@ -790,6 +892,7 @@ function saveData() {
 // === Synchronisation iCloud via Raccourcis ===
 // Renvoie l'état complet au format JSON (string)
 function todoGetState() {
+    tasks = normalizeTasksDates(tasks);
     const data = { tasks, categories, sectionStates, sortCriteria, projectTitle, projectCelebrated, projectCompletedAt };
     return JSON.stringify(data);
 }
@@ -798,7 +901,7 @@ function todoGetState() {
 function todoSetState(state) {
     try {
         const obj = (typeof state === 'string') ? JSON.parse(state) : state;
-        tasks = obj.tasks || [];
+        tasks = normalizeTasksDates(obj.tasks || []);
         categories = obj.categories || [];
         sectionStates = obj.sectionStates || {};
         sortCriteria = obj.sortCriteria || [];
@@ -1191,7 +1294,7 @@ async function cloudSave(options) {
                 if (e.key === STORAGE_KEY && canUseLocalStorage) {
                     try {
                         const data = JSON.parse(e.newValue || '{}');
-                        tasks = data.tasks || [];
+                        tasks = normalizeTasksDates(data.tasks || []);
                         categories = data.categories || [];
                         sectionStates = data.sectionStates || {};
                         sortCriteria = data.sortCriteria || [];
@@ -1470,6 +1573,9 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
       description: '',
       subtasks: [],
       dueDate: '',
+      dueDateDisplay: '',
+      scheduledDate: '',
+      scheduledTime: '',
       expanded: false
     };
     tasks.push(task);
@@ -1571,6 +1677,7 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
             }
 
             filteredTasks.forEach(task => {
+                normalizeTaskDates(task);
                 const taskDiv = document.createElement('div');
                 taskDiv.setAttribute('data-task-id', String(task.id));
                 const categoryColor = categories.find(cat => cat.name === task.category)?.color || '#ffffff';
@@ -1697,6 +1804,14 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                     dueDateSpan.textContent = '';
                 }
 
+                const scheduledDateSpan = document.createElement('span');
+                scheduledDateSpan.className = 'task-scheduled-date';
+                function updateTaskScheduledSummary() {
+                    const text = formatScheduledDateTime(task.scheduledDate, task.scheduledTime);
+                    scheduledDateSpan.textContent = text ? `Planifié : ${text}` : '';
+                }
+                updateTaskScheduledSummary();
+
                 // Afficher le nombre de sous-tâches
                 const subtasksCountSpan = document.createElement('span');
                 subtasksCountSpan.className = 'task-subtasks-count';
@@ -1719,6 +1834,7 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                 taskHeader.appendChild(titleSpan);
                 taskHeader.appendChild(categorySpan);
                 taskHeader.appendChild(dueDateSpan);
+                taskHeader.appendChild(scheduledDateSpan);
                 taskHeader.appendChild(subtasksCountSpan);
                 taskHeader.appendChild(toggleButton);
 
@@ -1754,6 +1870,7 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                 subtaskList.className = 'subtasks';
                 task.subtasks = task.subtasks || [];
                 task.subtasks.forEach((subtask, index) => {
+                    normalizeSubtaskDates(subtask);
                     const li = document.createElement('li');
 
                     const subCheckbox = document.createElement('input');
@@ -1813,7 +1930,7 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                         input.setAttribute('name', 'subtask-title');
                         input.setAttribute('aria-label', 'Titre de la sous-tâche');
                         input.setAttribute('autocomplete', 'off');
-                        li.replaceChild(input, subSpan);
+                        subtaskContent.replaceChild(input, subSpan);
                         input.focus();
 
                         input.addEventListener('blur', function() {
@@ -1829,8 +1946,50 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                         });
                     });
 
+                    const subtaskContent = document.createElement('div');
+                    subtaskContent.className = 'subtask-content';
+
+                    const subtaskScheduledLabel = document.createElement('span');
+                    subtaskScheduledLabel.className = 'subtask-scheduled-label';
+                    function updateSubtaskScheduledSummary() {
+                        const text = formatScheduledDateTime(subtask.scheduledDate, subtask.scheduledTime);
+                        subtaskScheduledLabel.textContent = text ? `📅 ${text}` : '';
+                    }
+                    updateSubtaskScheduledSummary();
+
+                    const subtaskScheduledDate = document.createElement('input');
+                    subtaskScheduledDate.type = 'date';
+                    subtaskScheduledDate.className = 'subtask-scheduled-date';
+                    subtaskScheduledDate.value = subtask.scheduledDate || '';
+                    subtaskScheduledDate.setAttribute('aria-label', 'Date certaine de la sous-tâche');
+                    subtaskScheduledDate.addEventListener('change', function() {
+                        subtask.scheduledDate = isValidYmdDate(subtaskScheduledDate.value) ? subtaskScheduledDate.value : '';
+                        if (!subtask.scheduledDate) {
+                            subtask.scheduledTime = '';
+                            subtaskScheduledTime.value = '';
+                        }
+                        updateSubtaskScheduledSummary();
+                        saveData();
+                    });
+
+                    const subtaskScheduledTime = document.createElement('input');
+                    subtaskScheduledTime.type = 'time';
+                    subtaskScheduledTime.className = 'subtask-scheduled-time';
+                    subtaskScheduledTime.value = subtask.scheduledTime || '';
+                    subtaskScheduledTime.setAttribute('aria-label', 'Heure certaine de la sous-tâche');
+                    subtaskScheduledTime.addEventListener('change', function() {
+                        subtask.scheduledTime = isValidScheduledTime(subtaskScheduledTime.value) ? subtaskScheduledTime.value : '';
+                        updateSubtaskScheduledSummary();
+                        saveData();
+                    });
+
+                    subtaskContent.appendChild(subSpan);
+                    subtaskContent.appendChild(subtaskScheduledDate);
+                    subtaskContent.appendChild(subtaskScheduledTime);
+                    subtaskContent.appendChild(subtaskScheduledLabel);
+
                     li.appendChild(subCheckbox);
-                    li.appendChild(subSpan);
+                    li.appendChild(subtaskContent);
                     subtaskList.appendChild(li);
                 });
 
@@ -1853,7 +2012,9 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
     if (subtaskTitle) {
         task.subtasks.push({
             title: subtaskTitle,
-            completed: false
+            completed: false,
+            scheduledDate: '',
+            scheduledTime: ''
         });
         task.celebratedSubtasks = false; // réarmer la célébration des sous-tâches
         saveData();
@@ -1949,6 +2110,66 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                 info.appendChild(dueDateInput);
 
                 taskDetails.appendChild(info);
+
+                const scheduledSection = document.createElement('div');
+                scheduledSection.className = 'scheduled-fields';
+
+                const scheduledTitle = document.createElement('h4');
+                scheduledTitle.textContent = 'Date certaine';
+                const scheduledHelp = document.createElement('p');
+                scheduledHelp.textContent = 'Moment planifié précis, distinct de la date d’échéance.';
+
+                const scheduledRow = document.createElement('div');
+                scheduledRow.className = 'scheduled-input-row';
+
+                const scheduledDateWrap = document.createElement('div');
+                const scheduledDateLabel = document.createElement('label');
+                scheduledDateLabel.textContent = 'Date certaine :';
+                const scheduledDateInput = document.createElement('input');
+                scheduledDateInput.type = 'date';
+                scheduledDateInput.value = task.scheduledDate || '';
+                const scheduledDateId = 'scheduled-date_' + task.id;
+                scheduledDateInput.id = scheduledDateId;
+                scheduledDateInput.name = 'scheduled-date';
+                scheduledDateInput.setAttribute('aria-label', 'Date certaine de la tâche');
+                scheduledDateLabel.htmlFor = scheduledDateId;
+                scheduledDateInput.addEventListener('change', function() {
+                    task.scheduledDate = isValidYmdDate(scheduledDateInput.value) ? scheduledDateInput.value : '';
+                    if (!task.scheduledDate) {
+                        task.scheduledTime = '';
+                        scheduledTimeInput.value = '';
+                    }
+                    updateTaskScheduledSummary();
+                    saveData();
+                });
+                scheduledDateWrap.appendChild(scheduledDateLabel);
+                scheduledDateWrap.appendChild(scheduledDateInput);
+
+                const scheduledTimeWrap = document.createElement('div');
+                const scheduledTimeLabel = document.createElement('label');
+                scheduledTimeLabel.textContent = 'Heure :';
+                const scheduledTimeInput = document.createElement('input');
+                scheduledTimeInput.type = 'time';
+                scheduledTimeInput.value = task.scheduledTime || '';
+                const scheduledTimeId = 'scheduled-time_' + task.id;
+                scheduledTimeInput.id = scheduledTimeId;
+                scheduledTimeInput.name = 'scheduled-time';
+                scheduledTimeInput.setAttribute('aria-label', 'Heure certaine de la tâche');
+                scheduledTimeLabel.htmlFor = scheduledTimeId;
+                scheduledTimeInput.addEventListener('change', function() {
+                    task.scheduledTime = isValidScheduledTime(scheduledTimeInput.value) ? scheduledTimeInput.value : '';
+                    updateTaskScheduledSummary();
+                    saveData();
+                });
+                scheduledTimeWrap.appendChild(scheduledTimeLabel);
+                scheduledTimeWrap.appendChild(scheduledTimeInput);
+
+                scheduledRow.appendChild(scheduledDateWrap);
+                scheduledRow.appendChild(scheduledTimeWrap);
+                scheduledSection.appendChild(scheduledTitle);
+                scheduledSection.appendChild(scheduledHelp);
+                scheduledSection.appendChild(scheduledRow);
+                taskDetails.appendChild(scheduledSection);
 
                 // Bouton de suppression de la tâche
                 const deleteTaskBtn = document.createElement('button');
@@ -2206,7 +2427,7 @@ function toggleTaskCompletion(taskId) {
                         break;
                     case 'reset':
                         // Restaurer les données précédentes
-                        tasks = lastAction.tasks;
+                        tasks = normalizeTasksDates(lastAction.tasks);
                         categories = lastAction.categories;
                         sectionStates = lastAction.sectionStates;
                         sortCriteria = [];
@@ -2393,7 +2614,7 @@ function toggleTaskCompletion(taskId) {
         document.getElementById('sync-box').addEventListener('input', function() {
             try {
                 const data = JSON.parse(this.value);
-                tasks = data.tasks || [];
+                tasks = normalizeTasksDates(data.tasks || []);
                 categories = data.categories || [];
                 sectionStates = data.sectionStates || {};
                 sortCriteria = data.sortCriteria || [];
