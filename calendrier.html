@@ -1,0 +1,1219 @@
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Calendrier TodoPro</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        button {
+            background-color: #333333;
+            color: #e0e0e0;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        button:hover {
+            background-color: #444444;
+        }
+        input[type="text"],
+        input[type="date"],
+        input[type="time"],
+        textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #333333;
+            border-radius: 6px;
+        }
+        textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #cccccc;
+            font-size: 0.95em;
+        }
+        .top-tabs {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin: 0 0 16px;
+            border-bottom: 1px solid #333333;
+            padding-bottom: 8px;
+        }
+        .top-tab {
+            color: #e0e0e0;
+            text-decoration: none;
+            background-color: #1e1e1e;
+            border: 1px solid #333333;
+            border-radius: 6px;
+            padding: 8px 14px;
+            line-height: 1;
+        }
+        .top-tab:hover {
+            background-color: #2a2a2a;
+        }
+        .top-tab.active {
+            background-color: #444444;
+            border-color: #666666;
+            color: #ffffff;
+            font-weight: 600;
+        }
+        #cloud-status {
+            position: fixed;
+            left: 16px;
+            bottom: 16px;
+            z-index: 1000;
+            background: #222222;
+            color: #dddddd;
+            border: 1px solid #333333;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            opacity: 0.9;
+            pointer-events: none;
+            white-space: nowrap;
+            display: none;
+        }
+        #cloud-status.ok {
+            border-color: #2ecc71;
+            color: #bff3cf;
+        }
+        #cloud-status.err {
+            border-color: #e74c3c;
+            color: #ffd3ce;
+        }
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .modal {
+            background: #1e1e1e;
+            border: 1px solid #333333;
+            border-radius: 12px;
+            padding: 16px;
+            width: min(420px, 90vw);
+            color: #e0e0e0;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+        }
+        .modal h3 {
+            margin: 0 0 8px;
+        }
+        .modal p {
+            margin: 0 0 12px;
+            color: #bbbbbb;
+        }
+        .modal .actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 12px;
+        }
+        .modal .error {
+            color: #ff8a8a;
+            display: none;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+        .calendar-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0 16px;
+        }
+        #calendar-title-input {
+            font-size: 1.4em;
+            font-weight: 600;
+            max-width: 520px;
+            text-align: center;
+            box-shadow: 0 0 0 1px #444444 inset;
+        }
+        .calendar-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        #calendar-month-label {
+            min-width: 220px;
+            text-align: center;
+            font-size: 1.4em;
+            color: #ffffff;
+            margin: 0;
+            text-transform: capitalize;
+        }
+        .calendar-page {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 320px;
+            gap: 18px;
+            align-items: start;
+        }
+        .calendar-board {
+            min-width: 0;
+        }
+        .calendar-weekdays,
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+        }
+        .calendar-weekdays {
+            gap: 1px;
+            margin-bottom: 1px;
+            color: #bdbdbd;
+            font-size: 0.85em;
+            text-align: center;
+        }
+        .calendar-weekday {
+            padding: 8px 4px;
+            background: #181818;
+            border: 1px solid #262626;
+        }
+        .calendar-grid {
+            gap: 1px;
+            background: #262626;
+            border: 1px solid #262626;
+        }
+        .calendar-day {
+            min-height: 118px;
+            background: #1a1a1a;
+            padding: 8px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .calendar-day.outside-month {
+            background: #151515;
+            color: #777777;
+        }
+        .calendar-day.today {
+            box-shadow: inset 0 0 0 2px #6aa0ff;
+        }
+        .calendar-day-number {
+            font-size: 0.85em;
+            color: #cccccc;
+            margin-bottom: 6px;
+        }
+        .calendar-items {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .calendar-item {
+            border-radius: 5px;
+            padding: 5px 6px;
+            font-size: 0.82em;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+            border: 1px solid transparent;
+        }
+        .calendar-item.manual {
+            background: #263238;
+            border-color: #3f5861;
+        }
+        .calendar-item.todo {
+            background: #2d2417;
+            border-color: #76562b;
+        }
+        .calendar-item.completed {
+            opacity: 0.62;
+            text-decoration: line-through;
+        }
+        .calendar-item-time {
+            color: #a8d6e8;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+        .calendar-item-source {
+            color: #bbbbbb;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+        .calendar-item-notes {
+            display: block;
+            color: #cccccc;
+            margin-top: 3px;
+            white-space: pre-wrap;
+        }
+        .delete-event-btn {
+            display: block;
+            margin: 5px 0 0;
+            padding: 3px 6px;
+            font-size: 0.78em;
+            background: #3a2424;
+        }
+        .delete-event-btn:hover {
+            background: #513030;
+        }
+        .side-section {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        .side-section h2 {
+            font-size: 1.1em;
+            margin: 0 0 12px;
+            color: #ffffff;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .action-buttons button {
+            flex: 1 1 140px;
+            min-height: 40px;
+        }
+        .sr-only {
+            position: absolute !important;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 1px, 1px);
+            white-space: nowrap;
+            border: 0;
+        }
+        @media (max-width: 900px) {
+            .calendar-page {
+                grid-template-columns: 1fr;
+            }
+            .calendar-day {
+                min-height: 98px;
+                padding: 6px;
+            }
+        }
+        @media (max-width: 620px) {
+            body {
+                padding: 14px;
+            }
+            .calendar-toolbar {
+                gap: 8px;
+            }
+            #calendar-month-label {
+                min-width: 0;
+                flex: 1;
+                font-size: 1.05em;
+            }
+            .calendar-weekday {
+                font-size: 0.78em;
+                padding: 6px 2px;
+            }
+            .calendar-day {
+                min-height: 86px;
+                padding: 5px;
+            }
+            .calendar-item {
+                font-size: 0.74em;
+                padding: 4px;
+            }
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <nav class="top-tabs" aria-label="Navigation projet">
+        <a class="top-tab" id="todo-tab-link" href="todo.html">Todo</a>
+        <a class="top-tab active" id="calendar-tab-link" href="calendrier.html" aria-current="page">Calendrier</a>
+    </nav>
+
+    <div id="cloud-status" aria-live="polite">Cloud: non initialisé</div>
+
+    <div id="key-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="key-modal-title">
+        <div class="modal">
+            <h3 id="key-modal-title">Charger un projet</h3>
+            <p>Entrez la clé du projet (UUID v4) :</p>
+            <input type="text" id="key-input" placeholder="xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+            <div id="key-error" class="error">Clé invalide. Format attendu : UUID v4.</div>
+            <div class="actions">
+                <button id="key-cancel" type="button">Annuler</button>
+                <button id="key-confirm" type="button">Valider</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="calendar-header">
+        <label for="calendar-title-input" id="calendar-title-label">Nom du calendrier :</label>
+        <input id="calendar-title-input" name="calendar-title" type="text" placeholder="Calendrier" aria-label="Nom du calendrier" autocomplete="off">
+    </div>
+
+    <div class="calendar-toolbar" aria-label="Navigation mensuelle">
+        <button id="prev-month-btn" type="button">Mois précédent</button>
+        <h1 id="calendar-month-label">Calendrier</h1>
+        <button id="next-month-btn" type="button">Mois suivant</button>
+    </div>
+
+    <div class="calendar-page">
+        <main class="calendar-board" aria-label="Calendrier mensuel">
+            <div class="calendar-weekdays" aria-hidden="true">
+                <div class="calendar-weekday">Lun</div>
+                <div class="calendar-weekday">Mar</div>
+                <div class="calendar-weekday">Mer</div>
+                <div class="calendar-weekday">Jeu</div>
+                <div class="calendar-weekday">Ven</div>
+                <div class="calendar-weekday">Sam</div>
+                <div class="calendar-weekday">Dim</div>
+            </div>
+            <div id="calendar-grid" class="calendar-grid"></div>
+        </main>
+
+        <aside>
+            <section class="side-section" aria-labelledby="add-event-title">
+                <h2 id="add-event-title">Ajouter un événement</h2>
+                <form id="event-form">
+                    <label for="event-title">Titre</label>
+                    <input id="event-title" name="event-title" type="text" required autocomplete="off">
+
+                    <label for="event-date">Date</label>
+                    <input id="event-date" name="event-date" type="date" required>
+
+                    <label for="event-time">Heure optionnelle</label>
+                    <input id="event-time" name="event-time" type="time">
+
+                    <label for="event-notes">Notes optionnelles</label>
+                    <textarea id="event-notes" name="event-notes"></textarea>
+
+                    <button type="submit">Ajouter</button>
+                </form>
+            </section>
+
+            <section class="side-section" aria-labelledby="sync-title">
+                <h2 id="sync-title">Sauvegarde &amp; Restauration calendrier</h2>
+                <label for="calendar-sync-box" class="sr-only">JSON du calendrier</label>
+                <textarea id="calendar-sync-box" name="calendar-sync-json" aria-label="Zone JSON du calendrier" placeholder="Copier ou coller ici le JSON du calendrier..."></textarea>
+                <div class="action-buttons">
+                    <button id="copy-calendar-btn" type="button">Copier JSON</button>
+                    <button id="reload-calendar-btn" type="button">Recharger cloud</button>
+                </div>
+            </section>
+        </aside>
+    </div>
+
+    <textarea id="calendar-sync-data" style="display:none;"></textarea>
+
+<script>
+let calendarTitle = 'Calendrier';
+let calendarEvents = [];
+let calendarView = {
+    year: new Date().getFullYear(),
+    month: new Date().getMonth()
+};
+let calendarSectionStates = {};
+let calendarTodoItems = [];
+let calendarCanUseLocalStorage = false;
+let calendarAutosaveTimer = null;
+let calendarFbApp = null;
+let calendarDb = null;
+let calendarFbDocRef = null;
+let calendarTodoDocRef = null;
+
+const CALENDAR_AUTOSAVE_DELAY = 800;
+const CALENDAR_STORAGE_BASE = 'CalendarProV1';
+const CALENDAR_CLOUD_BADGE_MODE = 'errors';
+const CALENDAR_UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const TODO_PAGE_NAME = 'todo.html';
+const CALENDAR_PAGE_NAME = 'calendrier.html';
+
+const calendarParams = new URLSearchParams(location.search);
+const calendarUrlKey = calendarParams.get('k');
+const CALENDAR_PROJECT_KEY = CALENDAR_UUID_V4.test(calendarUrlKey || '') ? calendarUrlKey : null;
+
+if (CALENDAR_PROJECT_KEY) {
+    window.FB_SHARED_KEY = CALENDAR_PROJECT_KEY;
+}
+
+window.FB_CONFIG = {
+    apiKey: "AIzaSyBpR5Q9mXOAG18DDpBOX3F28jYiS4zOgDc",
+    authDomain: "mes-todopro.firebaseapp.com",
+    projectId: "mes-todopro",
+    storageBucket: "mes-todopro.firebasestorage.app",
+    messagingSenderId: "456898151913",
+    appId: "1:456898151913:web:c5b9bf1e3ac1bcb5887778",
+    measurementId: "G-Z7644F6D7N"
+};
+
+function calendarActiveKey() {
+    return String(window.FB_SHARED_KEY || CALENDAR_PROJECT_KEY || '').trim();
+}
+
+function calendarStorageKey() {
+    const key = calendarActiveKey();
+    return key ? `${CALENDAR_STORAGE_BASE}:${key}` : CALENDAR_STORAGE_BASE;
+}
+
+function calendarSharedKeyStorageKey() {
+    const key = calendarActiveKey();
+    return key ? `FB_SHARED_KEY:${key}` : 'FB_SHARED_KEY';
+}
+
+function calendarCurrentFolderPath() {
+    const path = location.pathname || '';
+    const lastSlash = path.lastIndexOf('/');
+    return lastSlash >= 0 ? path.slice(0, lastSlash + 1) : '';
+}
+
+function calendarProjectPageHref(pageName, options) {
+    options = options || {};
+    const key = String(options.key || calendarActiveKey()).trim();
+    const basePath = calendarCurrentFolderPath();
+    const query = key ? `?k=${encodeURIComponent(key)}` : '';
+    if (options.absolute) {
+        return new URL(`${pageName}${query}`, location.href).href;
+    }
+    return `${basePath}${pageName}${query}`;
+}
+
+function calendarSetCloudStatus(text, cls, opts) {
+    if (CALENDAR_CLOUD_BADGE_MODE === 'off') return;
+    if (CALENDAR_CLOUD_BADGE_MODE === 'errors' && cls !== 'err') return;
+
+    const el = document.getElementById('cloud-status');
+    if (!el) return;
+    opts = opts || {};
+    el.textContent = `Cloud: ${text}`;
+    el.classList.remove('ok', 'err');
+    if (cls) el.classList.add(cls);
+    el.style.display = 'block';
+
+    clearTimeout(el._hideTimer);
+    if (cls !== 'err' && !opts.persist) {
+        el._hideTimer = setTimeout(function() {
+            el.style.display = 'none';
+        }, 1600);
+    }
+}
+
+function calendarUpdateTopTabs() {
+    const key = calendarActiveKey();
+    const todoLink = document.getElementById('todo-tab-link');
+    const calendarLink = document.getElementById('calendar-tab-link');
+    if (todoLink) {
+        todoLink.href = calendarProjectPageHref(TODO_PAGE_NAME, { key });
+    }
+    if (calendarLink) {
+        calendarLink.href = calendarProjectPageHref(CALENDAR_PAGE_NAME, { key });
+    }
+}
+
+function calendarEnsureSharedKey() {
+    if (calendarActiveKey().length >= 20) return true;
+    try {
+        const savedForProject = localStorage.getItem(calendarSharedKeyStorageKey());
+        const savedGeneric = localStorage.getItem('FB_SHARED_KEY');
+        const saved = savedForProject || savedGeneric;
+        if (saved && saved.length >= 20) {
+            window.FB_SHARED_KEY = saved;
+            return true;
+        }
+    } catch (_) {}
+    return false;
+}
+
+function calendarEnsureFirebaseConfig() {
+    try {
+        if (window.FB_CONFIG && window.FB_CONFIG.apiKey) return true;
+        const saved = localStorage.getItem('FB_CONFIG_JSON');
+        if (saved) {
+            window.FB_CONFIG = JSON.parse(saved);
+            return !!window.FB_CONFIG.apiKey;
+        }
+    } catch (_) {}
+    return false;
+}
+
+(function calendarTestLocalStorage() {
+    try {
+        const t = '__calendar_ls_test__';
+        localStorage.setItem(t, '1');
+        localStorage.removeItem(t);
+        calendarCanUseLocalStorage = true;
+    } catch (e) {
+        calendarCanUseLocalStorage = false;
+    }
+})();
+
+function calendarNormalizeState(rawState) {
+    const state = rawState || {};
+    const now = new Date();
+    const view = state.calendarView || {};
+
+    calendarTitle = state.calendarTitle || 'Calendrier';
+    calendarEvents = Array.isArray(state.events) ? state.events.filter(Boolean).map(function(event) {
+        return {
+            id: event.id || Date.now() + Math.floor(Math.random() * 1000),
+            title: String(event.title || '').trim() || 'Evénement sans titre',
+            date: calendarNormalizeDateValue(event.date) || calendarYmd(now),
+            time: String(event.time || '').trim(),
+            notes: String(event.notes || ''),
+            source: 'calendar',
+            type: 'manual'
+        };
+    }) : [];
+    calendarView = {
+        year: calendarIsInteger(view.year) ? view.year : now.getFullYear(),
+        month: calendarIsInteger(view.month) && view.month >= 0 && view.month <= 11 ? view.month : now.getMonth()
+    };
+    calendarSectionStates = state.sectionStates || {};
+}
+
+function calendarGetStateObject() {
+    return {
+        calendarTitle,
+        events: calendarEvents,
+        calendarView,
+        sectionStates: calendarSectionStates
+    };
+}
+
+function calendarGetState() {
+    return JSON.stringify(calendarGetStateObject());
+}
+
+function calendarSetState(state, options) {
+    try {
+        const obj = typeof state === 'string' ? JSON.parse(state) : state;
+        calendarNormalizeState(obj);
+        calendarSaveData(options || {});
+        calendarRenderTitle();
+        calendarRender();
+        return true;
+    } catch (e) {
+        console.warn('calendarSetState: JSON invalide', e);
+        return false;
+    }
+}
+
+function calendarLoadData() {
+    const syncTextarea = document.getElementById('calendar-sync-data');
+    let jsonText = '';
+
+    if (calendarCanUseLocalStorage) {
+        try {
+            jsonText = localStorage.getItem(calendarStorageKey()) || '';
+        } catch (_) {}
+    }
+
+    if (!jsonText && syncTextarea) {
+        jsonText = syncTextarea.value || '';
+    }
+
+    try {
+        calendarNormalizeState(JSON.parse(jsonText || '{}'));
+    } catch (e) {
+        console.warn('Erreur chargement calendrier :', e);
+        calendarNormalizeState({});
+    }
+}
+
+function calendarSaveData(options) {
+    options = options || {};
+    const syncTextarea = document.getElementById('calendar-sync-data');
+    const jsonData = JSON.stringify(calendarGetStateObject(), null, 2);
+
+    if (syncTextarea) syncTextarea.value = jsonData;
+    if (calendarCanUseLocalStorage) {
+        try {
+            localStorage.setItem(calendarStorageKey(), jsonData);
+        } catch (e) {
+            console.warn('localStorage calendrier indisponible/plein.', e);
+        }
+    }
+
+    calendarUpdateSyncBox();
+    if (!options.skipCloud) {
+        calendarScheduleCloudSave();
+    }
+}
+
+function calendarUpdateSyncBox() {
+    const syncBox = document.getElementById('calendar-sync-box');
+    if (syncBox) {
+        syncBox.value = JSON.stringify(calendarGetStateObject(), null, 2);
+    }
+}
+
+function calendarScheduleCloudSave() {
+    if (!calendarFbDocRef && !calendarInitFirebase()) return;
+    if (calendarAutosaveTimer) clearTimeout(calendarAutosaveTimer);
+    calendarSetCloudStatus('modifié - sauvegarde...');
+    calendarAutosaveTimer = setTimeout(function() {
+        calendarCloudSave({ silent: true });
+        calendarAutosaveTimer = null;
+    }, CALENDAR_AUTOSAVE_DELAY);
+}
+
+function calendarInitFirebase() {
+    if (typeof firebase === 'undefined') {
+        console.warn('Firebase indisponible : mode preview/local uniquement.');
+        calendarSetCloudStatus('Firebase indisponible - mode local', 'err', { persist: true });
+        return false;
+    }
+
+    if (!calendarActiveKey()) {
+        calendarSetCloudStatus('clé requise', 'err', { persist: true });
+        return false;
+    }
+
+    try {
+        localStorage.setItem('FB_SHARED_KEY', calendarActiveKey());
+        localStorage.setItem(calendarSharedKeyStorageKey(), calendarActiveKey());
+    } catch (_) {}
+
+    const cfgOk = calendarEnsureFirebaseConfig();
+    if (!cfgOk || !calendarActiveKey()) {
+        calendarSetCloudStatus('non configuré', 'err');
+        return false;
+    }
+
+    try {
+        calendarFbApp = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(window.FB_CONFIG);
+        calendarDb = firebase.firestore();
+        calendarFbDocRef = calendarDb.collection('calendarpro').doc(String(window.FB_SHARED_KEY));
+        calendarTodoDocRef = calendarDb.collection('todopro').doc(String(window.FB_SHARED_KEY));
+
+        if (window._calendarFbUnsub) {
+            try { window._calendarFbUnsub(); } catch (_) {}
+        }
+        window._calendarFbUnsub = calendarFbDocRef.onSnapshot(function(snap) {
+            if (snap.metadata && snap.metadata.hasPendingWrites) return;
+            if (!snap.exists) return;
+            const data = snap.data();
+            if (data && data.state) {
+                calendarSetState(data.state, { skipCloud: true });
+                calendarSetCloudStatus('chargé', 'ok');
+            }
+        }, function(err) {
+            console.warn('calendarpro onSnapshot erreur:', err);
+            calendarSetCloudStatus('écoute calendrier échouée (' + (err.code || err.message || 'inconnu') + ')', 'err');
+        });
+
+        if (window._calendarTodoUnsub) {
+            try { window._calendarTodoUnsub(); } catch (_) {}
+        }
+        window._calendarTodoUnsub = calendarTodoDocRef.onSnapshot(function(snap) {
+            if (!snap.exists) {
+                calendarTodoItems = [];
+                calendarRender();
+                return;
+            }
+            calendarTodoItems = calendarExtractTodoDueItems(snap.data());
+            calendarRender();
+        }, function(err) {
+            console.warn('todopro onSnapshot erreur:', err);
+            calendarSetCloudStatus('lecture todo échouée (' + (err.code || err.message || 'inconnu') + ')', 'err');
+        });
+
+        calendarSetCloudStatus('connecté', 'ok');
+        return true;
+    } catch (e) {
+        console.warn('Init Firebase calendrier échoué :', e);
+        calendarSetCloudStatus('échec init (' + (e.code || e.message || 'inconnu') + ')', 'err');
+        return false;
+    }
+}
+
+async function calendarCloudLoad() {
+    if (!calendarFbDocRef && !calendarInitFirebase()) return;
+    try {
+        calendarSetCloudStatus('chargement...');
+        const snap = await calendarFbDocRef.get();
+        if (snap.exists) {
+            const data = snap.data();
+            if (data && data.state) {
+                calendarSetState(data.state, { skipCloud: true });
+            }
+        }
+        await calendarLoadTodoDueItems();
+        calendarSetCloudStatus('chargé', 'ok');
+    } catch (e) {
+        console.warn('calendarCloudLoad() échec :', e);
+        calendarSetCloudStatus('lecture échouée (' + (e.code || e.message || 'inconnu') + ')', 'err');
+    }
+}
+
+async function calendarCloudSave(options) {
+    options = options || {};
+    if (!calendarFbDocRef && !calendarInitFirebase()) return;
+    try {
+        calendarSetCloudStatus('sauvegarde...');
+        await calendarFbDocRef.set({
+            state: calendarGetStateObject(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        calendarSetCloudStatus('sauvegardé', 'ok');
+        if (!options.silent) alert('Calendrier sauvegardé dans le cloud');
+    } catch (e) {
+        console.warn('calendarCloudSave() échec :', e);
+        calendarSetCloudStatus('échec sauvegarde (' + (e.code || e.message || 'inconnu') + ')', 'err');
+        if (!options.silent) alert('Échec sauvegarde calendrier');
+    }
+}
+
+async function calendarLoadTodoDueItems() {
+    if (!calendarTodoDocRef && !calendarInitFirebase()) return;
+    try {
+        const snap = await calendarTodoDocRef.get();
+        calendarTodoItems = snap.exists ? calendarExtractTodoDueItems(snap.data()) : [];
+        calendarRender();
+    } catch (e) {
+        console.warn('Lecture échéances todo échouée :', e);
+        calendarSetCloudStatus('lecture todo échouée (' + (e.code || e.message || 'inconnu') + ')', 'err');
+    }
+}
+
+function calendarExtractTodoDueItems(docData) {
+    const state = docData && docData.state ? docData.state : docData;
+    const tasks = state && Array.isArray(state.tasks) ? state.tasks : [];
+    return tasks.map(function(task) {
+        const date = calendarNormalizeDateValue(task && task.dueDate);
+        if (!date) return null;
+        return {
+            source: 'todo',
+            id: task.id || `${date}:${task.title || ''}`,
+            title: task.title || 'Tâche sans titre',
+            date,
+            completed: !!task.completed
+        };
+    }).filter(Boolean);
+}
+
+function calendarYmd(date) {
+    const year = date.getFullYear();
+    const month = calendarPad2(date.getMonth() + 1);
+    const day = calendarPad2(date.getDate());
+    return `${year}-${month}-${day}`;
+}
+
+function calendarPad2(value) {
+    value = String(value);
+    return value.length < 2 ? `0${value}` : value;
+}
+
+function calendarIsInteger(value) {
+    return typeof value === 'number' && isFinite(value) && Math.floor(value) === value;
+}
+
+function calendarNormalizeDateValue(value) {
+    if (!value) return '';
+    if (typeof value === 'string') {
+        const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+        const parsed = new Date(value);
+        return isNaN(parsed.getTime()) ? '' : calendarYmd(parsed);
+    }
+    if (value && typeof value.toDate === 'function') {
+        return calendarYmd(value.toDate());
+    }
+    if (value instanceof Date && !isNaN(value.getTime())) {
+        return calendarYmd(value);
+    }
+    return '';
+}
+
+function calendarFormatMonth(year, month) {
+    try {
+        return new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(year, month, 1));
+    } catch (_) {
+        const names = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+        return `${names[month]} ${year}`;
+    }
+}
+
+function calendarRenderTitle() {
+    const input = document.getElementById('calendar-title-input');
+    if (input) input.value = calendarTitle || 'Calendrier';
+}
+
+function calendarCombinedItemsByDate() {
+    const byDate = {};
+    calendarEvents.forEach(function(event) {
+        const date = calendarNormalizeDateValue(event.date);
+        if (!date) return;
+        if (!byDate[date]) byDate[date] = [];
+        byDate[date].push({
+            source: 'calendar',
+            id: event.id,
+            title: event.title || 'Evénement sans titre',
+            date: date,
+            time: event.time || '',
+            notes: event.notes || '',
+            type: 'manual'
+        });
+    });
+    calendarTodoItems.forEach(function(item) {
+        if (!item.date) return;
+        if (!byDate[item.date]) byDate[item.date] = [];
+        byDate[item.date].push(item);
+    });
+    Object.keys(byDate).forEach(function(date) {
+        byDate[date].sort(function(a, b) {
+            if (a.source !== b.source) return a.source === 'calendar' ? -1 : 1;
+            return String(a.time || '').localeCompare(String(b.time || ''));
+        });
+    });
+    return byDate;
+}
+
+function calendarRender() {
+    const grid = document.getElementById('calendar-grid');
+    const label = document.getElementById('calendar-month-label');
+    if (!grid || !label) return;
+
+    const year = calendarView.year;
+    const month = calendarView.month;
+    label.textContent = calendarFormatMonth(year, month);
+    grid.innerHTML = '';
+
+    const byDate = calendarCombinedItemsByDate();
+    const todayYmd = calendarYmd(new Date());
+    const firstDay = new Date(year, month, 1);
+    const mondayOffset = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    for (let i = 0; i < 42; i++) {
+        const dayCell = document.createElement('div');
+        dayCell.className = 'calendar-day';
+
+        let cellYear = year;
+        let cellMonth = month;
+        let dayNumber = i - mondayOffset + 1;
+
+        if (dayNumber < 1) {
+            cellMonth = month - 1;
+            if (cellMonth < 0) {
+                cellMonth = 11;
+                cellYear = year - 1;
+            }
+            dayNumber = daysInPrevMonth + dayNumber;
+            dayCell.classList.add('outside-month');
+        } else if (dayNumber > daysInMonth) {
+            dayNumber = dayNumber - daysInMonth;
+            cellMonth = month + 1;
+            if (cellMonth > 11) {
+                cellMonth = 0;
+                cellYear = year + 1;
+            }
+            dayCell.classList.add('outside-month');
+        }
+
+        const cellDate = calendarYmd(new Date(cellYear, cellMonth, dayNumber));
+        if (cellDate === todayYmd) {
+            dayCell.classList.add('today');
+        }
+
+        const number = document.createElement('div');
+        number.className = 'calendar-day-number';
+        number.textContent = String(dayNumber);
+        dayCell.appendChild(number);
+
+        const items = document.createElement('div');
+        items.className = 'calendar-items';
+        (byDate[cellDate] || []).forEach(function(item) {
+            items.appendChild(calendarCreateItemElement(item));
+        });
+        dayCell.appendChild(items);
+        grid.appendChild(dayCell);
+    }
+}
+
+function calendarCreateItemElement(item) {
+    const el = document.createElement('div');
+    el.className = item.source === 'todo' ? 'calendar-item todo' : 'calendar-item manual';
+    if (item.completed) el.classList.add('completed');
+
+    const source = document.createElement('span');
+    source.className = 'calendar-item-source';
+    source.textContent = item.source === 'todo' ? '[Todo]' : '[Calendrier]';
+    el.appendChild(source);
+
+    if (item.time) {
+        const time = document.createElement('span');
+        time.className = 'calendar-item-time';
+        time.textContent = item.time;
+        el.appendChild(time);
+    }
+
+    const title = document.createElement('span');
+    title.textContent = item.completed ? `Terminé: ${item.title}` : item.title;
+    el.appendChild(title);
+
+    if (item.notes) {
+        const notes = document.createElement('span');
+        notes.className = 'calendar-item-notes';
+        notes.textContent = item.notes;
+        el.appendChild(notes);
+    }
+
+    if (item.source === 'calendar') {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'delete-event-btn';
+        deleteBtn.textContent = 'Supprimer';
+        deleteBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            calendarDeleteEvent(item.id);
+        });
+        el.appendChild(deleteBtn);
+    }
+
+    return el;
+}
+
+function calendarAddEvent(event) {
+    calendarEvents.push({
+        id: Date.now(),
+        title: event.title,
+        date: event.date,
+        time: event.time || '',
+        notes: event.notes || '',
+        source: 'calendar',
+        type: 'manual'
+    });
+    calendarSaveData();
+    calendarRender();
+}
+
+function calendarDeleteEvent(eventId) {
+    calendarEvents = calendarEvents.filter(function(event) {
+        return String(event.id) !== String(eventId);
+    });
+    calendarSaveData();
+    calendarRender();
+}
+
+function calendarChangeMonth(delta) {
+    const next = new Date(calendarView.year, calendarView.month + delta, 1);
+    calendarView = {
+        year: next.getFullYear(),
+        month: next.getMonth()
+    };
+    calendarSaveData();
+    calendarRender();
+}
+
+function calendarShowKeyModal(force) {
+    const modal = document.getElementById('key-modal');
+    const input = document.getElementById('key-input');
+    const err = document.getElementById('key-error');
+    if (!modal || !input || !err) return;
+    modal._force = !!force;
+    input.value = '';
+    err.style.display = 'none';
+    modal.style.display = 'flex';
+    setTimeout(function() { input.focus(); }, 0);
+}
+
+function calendarHideKeyModal() {
+    const modal = document.getElementById('key-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function calendarBindKeyModal() {
+    const input = document.getElementById('key-input');
+    const err = document.getElementById('key-error');
+    const cancelBtn = document.getElementById('key-cancel');
+    const confirmBtn = document.getElementById('key-confirm');
+    const modal = document.getElementById('key-modal');
+    if (!input || !err || !cancelBtn || !confirmBtn || !modal) return;
+
+    async function acceptKey() {
+        const newKey = String(input.value || '').trim();
+        if (!CALENDAR_UUID_V4.test(newKey)) {
+            err.textContent = 'Clé invalide. Format attendu : UUID v4.';
+            err.style.display = 'block';
+            return;
+        }
+
+        window.FB_SHARED_KEY = newKey;
+        try {
+            localStorage.setItem('FB_SHARED_KEY', newKey);
+            localStorage.setItem(calendarSharedKeyStorageKey(), newKey);
+        } catch (_) {}
+
+        calendarUpdateTopTabs();
+        calendarLoadData();
+        calendarRenderTitle();
+        calendarRender();
+
+        if (window._calendarFbUnsub) {
+            try { window._calendarFbUnsub(); } catch (_) {}
+        }
+        if (window._calendarTodoUnsub) {
+            try { window._calendarTodoUnsub(); } catch (_) {}
+        }
+        calendarFbDocRef = null;
+        calendarTodoDocRef = null;
+
+        if (!calendarInitFirebase()) {
+            err.textContent = "Impossible d'initialiser Firebase pour cette clé.";
+            err.style.display = 'block';
+            return;
+        }
+
+        await calendarCloudLoad();
+        calendarHideKeyModal();
+    }
+
+    confirmBtn.addEventListener('click', acceptKey);
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') acceptKey();
+    });
+    cancelBtn.addEventListener('click', function() {
+        if (modal._force) {
+            err.textContent = 'Une clé valide est requise pour continuer.';
+            err.style.display = 'block';
+            return;
+        }
+        calendarHideKeyModal();
+    });
+}
+
+function calendarBindControls() {
+    document.getElementById('prev-month-btn').addEventListener('click', function() {
+        calendarChangeMonth(-1);
+    });
+    document.getElementById('next-month-btn').addEventListener('click', function() {
+        calendarChangeMonth(1);
+    });
+
+    const titleInput = document.getElementById('calendar-title-input');
+    titleInput.addEventListener('input', function() {
+        calendarTitle = titleInput.value.trim() || 'Calendrier';
+        calendarSaveData();
+    });
+
+    document.getElementById('event-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const titleInput = document.getElementById('event-title');
+        const dateInput = document.getElementById('event-date');
+        const timeInput = document.getElementById('event-time');
+        const notesInput = document.getElementById('event-notes');
+        const title = titleInput.value.trim();
+        const date = calendarNormalizeDateValue(dateInput.value);
+        if (!title || !date) return;
+
+        calendarAddEvent({
+            title,
+            date,
+            time: timeInput.value || '',
+            notes: notesInput.value || ''
+        });
+
+        titleInput.value = '';
+        timeInput.value = '';
+        notesInput.value = '';
+        dateInput.value = date;
+    });
+
+    document.getElementById('calendar-sync-box').addEventListener('input', function() {
+        try {
+            const data = JSON.parse(this.value);
+            calendarSetState(data);
+        } catch (e) {
+            // Laisse l'utilisateur finir de coller/éditer le JSON.
+        }
+    });
+
+    document.getElementById('copy-calendar-btn').addEventListener('click', function() {
+        const json = JSON.stringify(calendarGetStateObject(), null, 2);
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try { document.execCommand('copy'); } catch (_) {}
+            document.body.removeChild(ta);
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(json).then(function() {
+                alert('Calendrier (JSON) copié dans le presse-papiers');
+            }).catch(function() {
+                fallbackCopy(json);
+                alert('Calendrier (JSON) copié dans le presse-papiers');
+            });
+        } else {
+            fallbackCopy(json);
+            alert('Calendrier (JSON) copié dans le presse-papiers');
+        }
+    });
+
+    document.getElementById('reload-calendar-btn').addEventListener('click', function() {
+        calendarCloudLoad();
+    });
+
+    window.addEventListener('keydown', function(e) {
+        if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            calendarCloudSave({ silent: true });
+        }
+    });
+
+    window.addEventListener('storage', function(e) {
+        if (e.key === calendarStorageKey() && calendarCanUseLocalStorage) {
+            calendarLoadData();
+            calendarRenderTitle();
+            calendarRender();
+        }
+    });
+}
+
+function calendarInit() {
+    calendarEnsureSharedKey();
+    calendarUpdateTopTabs();
+    calendarLoadData();
+    calendarRenderTitle();
+    calendarUpdateSyncBox();
+
+    const eventDate = document.getElementById('event-date');
+    if (eventDate && !eventDate.value) {
+        eventDate.value = calendarYmd(new Date());
+    }
+
+    calendarBindKeyModal();
+    calendarBindControls();
+    calendarRender();
+
+    if (!calendarActiveKey()) {
+        calendarSetCloudStatus('clé requise', 'err', { persist: true });
+        calendarShowKeyModal(true);
+        return;
+    }
+
+    calendarInitFirebase();
+    calendarCloudLoad();
+}
+
+if (typeof window !== 'undefined') {
+    window.calendarGetState = calendarGetState;
+    window.calendarSetState = calendarSetState;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    calendarInit();
+});
+</script>
+</body>
+</html>
