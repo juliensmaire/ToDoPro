@@ -158,7 +158,7 @@
         }
         .subtasks li {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             margin-bottom: 5px;
         }
         .subtasks input[type="checkbox"] {
@@ -199,15 +199,49 @@
         }
         .subtask-content {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 150px 110px;
+            grid-template-columns: minmax(0, 1fr) auto;
             gap: 8px;
             align-items: center;
             flex: 1;
         }
+        .subtask-schedule-controls {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 6px;
+            align-items: center;
+            grid-column: 1 / -1;
+        }
         .subtask-scheduled-label {
             color: #a8d6e8;
             font-size: 0.85em;
+            min-height: 1.2em;
+        }
+        .subtask-plan-button {
+            padding: 4px 8px;
+            font-size: 0.82em;
+            white-space: nowrap;
+        }
+        .subtask-schedule-editor {
             grid-column: 1 / -1;
+            border: 1px solid #333333;
+            border-radius: 6px;
+            background-color: #191919;
+            padding: 8px;
+        }
+        .subtask-schedule-editor.hidden {
+            display: none;
+        }
+        .subtask-schedule-inputs {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 110px auto auto;
+            gap: 8px;
+            align-items: end;
+        }
+        .subtask-schedule-field label {
+            display: block;
+            margin: 0 0 3px;
+            color: #cccccc;
+            font-size: 0.8em;
         }
         .subtask-scheduled-date,
         .subtask-scheduled-time {
@@ -221,7 +255,8 @@
                 gap: 6px;
             }
             .scheduled-input-row,
-            .subtask-content {
+            .subtask-content,
+            .subtask-schedule-inputs {
                 grid-template-columns: 1fr;
             }
         }
@@ -1648,6 +1683,127 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
             return null;
         }
 
+        function renderSubtaskScheduleControls(task, subtask, index) {
+            normalizeSubtaskDates(subtask);
+
+            const controls = document.createElement('div');
+            controls.className = 'subtask-schedule-controls';
+
+            const scheduledLabel = document.createElement('span');
+            scheduledLabel.className = 'subtask-scheduled-label';
+
+            const toggleButton = document.createElement('button');
+            toggleButton.type = 'button';
+            toggleButton.className = 'subtask-plan-button';
+            toggleButton.setAttribute('aria-label', 'Planifier la sous-tâche');
+
+            const editor = document.createElement('div');
+            editor.className = 'subtask-schedule-editor hidden';
+            const editorId = `subtask-schedule-${task.id}-${index}`;
+            editor.id = editorId;
+            toggleButton.setAttribute('aria-controls', editorId);
+            toggleButton.setAttribute('aria-expanded', 'false');
+            editor.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            const inputRow = document.createElement('div');
+            inputRow.className = 'subtask-schedule-inputs';
+
+            const dateWrap = document.createElement('div');
+            dateWrap.className = 'subtask-schedule-field';
+            const dateLabel = document.createElement('label');
+            dateLabel.textContent = 'Date certaine';
+            const dateInput = document.createElement('input');
+            dateInput.type = 'date';
+            dateInput.className = 'subtask-scheduled-date';
+            dateInput.value = subtask.scheduledDate || '';
+            const dateId = `subtask-scheduled-date-${task.id}-${index}`;
+            dateInput.id = dateId;
+            dateInput.setAttribute('aria-label', 'Date certaine de la sous-tâche');
+            dateLabel.htmlFor = dateId;
+
+            const timeWrap = document.createElement('div');
+            timeWrap.className = 'subtask-schedule-field';
+            const timeLabel = document.createElement('label');
+            timeLabel.textContent = 'Heure';
+            const timeInput = document.createElement('input');
+            timeInput.type = 'time';
+            timeInput.className = 'subtask-scheduled-time';
+            timeInput.value = subtask.scheduledTime || '';
+            const timeId = `subtask-scheduled-time-${task.id}-${index}`;
+            timeInput.id = timeId;
+            timeInput.setAttribute('aria-label', 'Heure certaine de la sous-tâche');
+            timeLabel.htmlFor = timeId;
+
+            const okButton = document.createElement('button');
+            okButton.type = 'button';
+            okButton.textContent = 'OK';
+
+            const clearButton = document.createElement('button');
+            clearButton.type = 'button';
+            clearButton.textContent = 'Effacer';
+
+            function refreshSummary() {
+                const text = formatScheduledDateTime(subtask.scheduledDate, subtask.scheduledTime);
+                scheduledLabel.textContent = text ? `📅 ${text}` : '';
+                toggleButton.textContent = editor.classList.contains('hidden')
+                    ? (text ? 'Modifier' : 'Planifier')
+                    : 'Fermer';
+            }
+
+            function saveSubtaskSchedule() {
+                subtask.scheduledDate = isValidYmdDate(dateInput.value) ? dateInput.value : '';
+                subtask.scheduledTime = subtask.scheduledDate && isValidScheduledTime(timeInput.value) ? timeInput.value : '';
+                if (!subtask.scheduledDate) {
+                    dateInput.value = '';
+                    timeInput.value = '';
+                }
+                saveData();
+                renderTasks();
+            }
+
+            toggleButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                editor.classList.toggle('hidden');
+                toggleButton.setAttribute('aria-expanded', editor.classList.contains('hidden') ? 'false' : 'true');
+                refreshSummary();
+            });
+
+            okButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                saveSubtaskSchedule();
+            });
+
+            clearButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                subtask.scheduledDate = '';
+                subtask.scheduledTime = '';
+                saveData();
+                renderTasks();
+            });
+
+            dateWrap.appendChild(dateLabel);
+            dateWrap.appendChild(dateInput);
+            timeWrap.appendChild(timeLabel);
+            timeWrap.appendChild(timeInput);
+            inputRow.appendChild(dateWrap);
+            inputRow.appendChild(timeWrap);
+            inputRow.appendChild(okButton);
+            inputRow.appendChild(clearButton);
+            editor.appendChild(inputRow);
+
+            controls.appendChild(scheduledLabel);
+            controls.appendChild(toggleButton);
+            controls.appendChild(editor);
+            refreshSummary();
+
+            return controls;
+        }
+
         // Rendre les tâches
         function renderTasks() {
             const taskList = document.getElementById('task-list');
@@ -1910,6 +2066,9 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                         renderTasks();
                     });
 
+                    const subtaskContent = document.createElement('div');
+                    subtaskContent.className = 'subtask-content';
+
                     // Titre de la sous-tâche (édition en ligne)
                     const subSpan = document.createElement('span');
                     subSpan.className = 'subtask-title';
@@ -1946,47 +2105,8 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                         });
                     });
 
-                    const subtaskContent = document.createElement('div');
-                    subtaskContent.className = 'subtask-content';
-
-                    const subtaskScheduledLabel = document.createElement('span');
-                    subtaskScheduledLabel.className = 'subtask-scheduled-label';
-                    function updateSubtaskScheduledSummary() {
-                        const text = formatScheduledDateTime(subtask.scheduledDate, subtask.scheduledTime);
-                        subtaskScheduledLabel.textContent = text ? `📅 ${text}` : '';
-                    }
-                    updateSubtaskScheduledSummary();
-
-                    const subtaskScheduledDate = document.createElement('input');
-                    subtaskScheduledDate.type = 'date';
-                    subtaskScheduledDate.className = 'subtask-scheduled-date';
-                    subtaskScheduledDate.value = subtask.scheduledDate || '';
-                    subtaskScheduledDate.setAttribute('aria-label', 'Date certaine de la sous-tâche');
-                    subtaskScheduledDate.addEventListener('change', function() {
-                        subtask.scheduledDate = isValidYmdDate(subtaskScheduledDate.value) ? subtaskScheduledDate.value : '';
-                        if (!subtask.scheduledDate) {
-                            subtask.scheduledTime = '';
-                            subtaskScheduledTime.value = '';
-                        }
-                        updateSubtaskScheduledSummary();
-                        saveData();
-                    });
-
-                    const subtaskScheduledTime = document.createElement('input');
-                    subtaskScheduledTime.type = 'time';
-                    subtaskScheduledTime.className = 'subtask-scheduled-time';
-                    subtaskScheduledTime.value = subtask.scheduledTime || '';
-                    subtaskScheduledTime.setAttribute('aria-label', 'Heure certaine de la sous-tâche');
-                    subtaskScheduledTime.addEventListener('change', function() {
-                        subtask.scheduledTime = isValidScheduledTime(subtaskScheduledTime.value) ? subtaskScheduledTime.value : '';
-                        updateSubtaskScheduledSummary();
-                        saveData();
-                    });
-
                     subtaskContent.appendChild(subSpan);
-                    subtaskContent.appendChild(subtaskScheduledDate);
-                    subtaskContent.appendChild(subtaskScheduledTime);
-                    subtaskContent.appendChild(subtaskScheduledLabel);
+                    subtaskContent.appendChild(renderSubtaskScheduleControls(task, subtask, index));
 
                     li.appendChild(subCheckbox);
                     li.appendChild(subtaskContent);
@@ -2169,7 +2289,10 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                 scheduledSection.appendChild(scheduledTitle);
                 scheduledSection.appendChild(scheduledHelp);
                 scheduledSection.appendChild(scheduledRow);
-                taskDetails.appendChild(scheduledSection);
+                info.appendChild(scheduledSection);
+                if (subtasksLabel.parentNode === taskDetails) {
+                    taskDetails.insertBefore(info, subtasksLabel);
+                }
 
                 // Bouton de suppression de la tâche
                 const deleteTaskBtn = document.createElement('button');
