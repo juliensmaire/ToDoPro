@@ -537,6 +537,83 @@
             filter: grayscale(20%);
         }
         #global-actions { margin-top: 8px; }
+        .import-json-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+        #restore-json-btn {
+            min-height: 38px;
+            border-radius: 6px;
+            border: 1px solid #3a3a3a;
+            background-color: #2a2a2a;
+            font-weight: 600;
+        }
+        #restore-json-btn:hover {
+            background-color: #383838;
+        }
+        #sync-import-status {
+            color: #9ad4b0;
+            font-size: 0.9em;
+            min-height: 1.2em;
+        }
+        #sync-import-status.error {
+            color: #ff8a8a;
+        }
+        .json-subsection {
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid #333333;
+        }
+        .json-subsection:first-child {
+            margin-top: 0;
+            padding-top: 0;
+            border-top: 0;
+        }
+        .json-subsection h3 {
+            margin: 0 0 6px;
+            color: #ffffff;
+            font-size: 1.05em;
+        }
+        .json-help {
+            margin: 0 0 8px;
+            color: #bdbdbd;
+            font-size: 0.92em;
+            line-height: 1.35;
+        }
+        #patch-box {
+            min-height: 100px;
+        }
+        .patch-json-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+        .patch-json-actions button {
+            min-height: 38px;
+            border-radius: 6px;
+            border: 1px solid #3a3a3a;
+            background-color: #2a2a2a;
+            font-weight: 600;
+        }
+        .patch-json-actions button:hover {
+            background-color: #383838;
+        }
+        #patch-status {
+            color: #9ad4b0;
+            font-size: 0.9em;
+            min-height: 1.2em;
+        }
+        #patch-status.error {
+            color: #ff8a8a;
+        }
+        #patch-status.warning {
+            color: #ffd27d;
+        }
 
         /* --- Catégories : vue compacte lorsque la section est repliée --- */
         #categories-section.collapsed #category-list {
@@ -907,8 +984,26 @@
             <h2 class="section-title">Sauvegarde &amp; Restauration</h2>
         </div>
         <div class="section-content" id="import-export-content">
+            <div class="json-subsection">
+                <h3>JSON complet du projet</h3>
+            </div>
             <label for="sync-box" class="sr-only">Sauvegarde & Restauration (JSON)</label>
             <textarea id="sync-box" name="sync-json" aria-label="Zone de sauvegarde et restauration JSON" placeholder="Copier ou coller ici pour sauvegarder/restaurer..." style="width:100%;height:100px;background-color:#1e1e1e;color:#e0e0e0;border:1px solid #333;padding:10px;box-sizing:border-box;"></textarea>
+            <div class="import-json-actions">
+                <button id="restore-json-btn" type="button">Restaurer depuis JSON</button>
+                <span id="sync-import-status" role="status" aria-live="polite"></span>
+            </div>
+            <div class="json-subsection">
+                <h3>Ajout JSON / Patch</h3>
+                <p class="json-help">Collez ici un petit JSON pour ajouter des tâches, sous-tâches ou catégories sans remplacer tout le projet.</p>
+                <label for="patch-box" class="sr-only">Ajout JSON / Patch</label>
+                <textarea id="patch-box" name="patch-json" aria-label="Zone d'ajout JSON ou patch JSON" placeholder='{"tasksToAdd":[{"title":"Nouvelle tâche"}]}'></textarea>
+                <div class="patch-json-actions">
+                    <button id="apply-patch-btn" type="button">Appliquer l’ajout JSON</button>
+                    <button id="clear-patch-btn" type="button">Vider</button>
+                    <span id="patch-status" role="status" aria-live="polite"></span>
+                </div>
+            </div>
         </div>
 </div>
 
@@ -936,6 +1031,9 @@ let canUseLocalStorage = false; // indicateur: localStorage utilisable
 let projectTitle = 'TITRE'; // Nom lisible du projet (affiché en haut)
 let projectCelebrated = false;      // évite de rejouer le feu d’artifice
 let projectCompletedAt = null;      // date ISO quand le projet est terminé
+let calendarEvents = [];            // champ optionnel préservé si présent dans un JSON TodoPro
+let hasCalendarEventsField = false;
+let projectExtraState = {};         // champs projet inconnus conservés au lieu d'être perdus à l'import
 let detailedTaskDraftSubtasks = [];
 
 // === Auto-save vers Firebase (avec anti-spam) ===
@@ -987,6 +1085,12 @@ const REQUIRE_KEY_IF_NO_QUERY = true; // si pas de ?k=..., on exige une clé via
 const STORAGE_BASE = 'TodoProV1';
 const STORAGE_KEY = PROJECT_KEY ? `${STORAGE_BASE}:${PROJECT_KEY}` : STORAGE_BASE;
 const LS_FBKEY = PROJECT_KEY ? `FB_SHARED_KEY:${PROJECT_KEY}` : 'FB_SHARED_KEY';
+const TODO_FILTER_DEFAULTS = {
+    status: 'all',
+    category: 'all',
+    priority: 'all',
+    date: 'all'
+};
 const TODO_PAGE_NAME = 'todo.html';
 const CALENDAR_PAGE_NAME = 'calendrier.html';
 
@@ -1021,6 +1125,89 @@ function updateTopTabs() {
     if (calendarLink) {
         calendarLink.href = projectPageHref(CALENDAR_PAGE_NAME, { key });
     }
+}
+
+function getTodoFiltersStorageKey() {
+    const key = String(window.FB_SHARED_KEY || PROJECT_KEY || '').trim();
+    return `TodoFilters:${key || 'default'}`;
+}
+
+function normalizeTodoFilterState(raw) {
+    raw = isPlainObject(raw) ? raw : {};
+    const status = ['all', 'completed', 'active'].indexOf(raw.status) >= 0 ? raw.status : TODO_FILTER_DEFAULTS.status;
+    const priority = ['all', 'high', 'medium', 'low'].indexOf(raw.priority) >= 0 ? raw.priority : TODO_FILTER_DEFAULTS.priority;
+    const date = ['all', 'today', 'tomorrow', 'this_week', 'overdue'].indexOf(raw.date) >= 0 ? raw.date : TODO_FILTER_DEFAULTS.date;
+    return {
+        status: status,
+        category: typeof raw.category === 'string' && raw.category.trim() ? raw.category : TODO_FILTER_DEFAULTS.category,
+        priority: priority,
+        date: date
+    };
+}
+
+function getTodoFilterState() {
+    let status = TODO_FILTER_DEFAULTS.status;
+    document.querySelectorAll('#filter-status-group [data-filter]').forEach(function(button) {
+        if (button.classList.contains('active-filter')) {
+            status = button.getAttribute('data-filter') || TODO_FILTER_DEFAULTS.status;
+        }
+    });
+    const categorySelect = document.getElementById('filter-category');
+    const prioritySelect = document.getElementById('filter-priority');
+    const dateSelect = document.getElementById('filter-date');
+    return normalizeTodoFilterState({
+        status: status,
+        category: categorySelect ? categorySelect.value : TODO_FILTER_DEFAULTS.category,
+        priority: prioritySelect ? prioritySelect.value : TODO_FILTER_DEFAULTS.priority,
+        date: dateSelect ? dateSelect.value : TODO_FILTER_DEFAULTS.date
+    });
+}
+
+function setTodoStatusFilter(status) {
+    const normalized = normalizeTodoFilterState({ status: status }).status;
+    document.querySelectorAll('#filter-status-group [data-filter]').forEach(function(button) {
+        const active = button.getAttribute('data-filter') === normalized;
+        button.classList.toggle('active-filter', active);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+}
+
+function setSelectValueIfAvailable(select, value, fallback) {
+    if (!select) return;
+    const wanted = String(value || fallback || 'all');
+    const hasWanted = Array.prototype.some.call(select.options || [], function(option) {
+        return option.value === wanted;
+    });
+    select.value = hasWanted ? wanted : fallback;
+}
+
+function applyTodoFilterStateToControls(state) {
+    const normalized = normalizeTodoFilterState(state);
+    setTodoStatusFilter(normalized.status);
+    setSelectValueIfAvailable(document.getElementById('filter-category'), normalized.category, TODO_FILTER_DEFAULTS.category);
+    setSelectValueIfAvailable(document.getElementById('filter-priority'), normalized.priority, TODO_FILTER_DEFAULTS.priority);
+    setSelectValueIfAvailable(document.getElementById('filter-date'), normalized.date, TODO_FILTER_DEFAULTS.date);
+}
+
+function saveTodoFilterState() {
+    if (!canUseLocalStorage) return;
+    try {
+        localStorage.setItem(getTodoFiltersStorageKey(), JSON.stringify(getTodoFilterState()));
+    } catch (e) {
+        console.warn('Sauvegarde filtres Todo impossible :', e);
+    }
+}
+
+function restoreTodoFilterState() {
+    let saved = null;
+    if (canUseLocalStorage) {
+        try {
+            saved = JSON.parse(localStorage.getItem(getTodoFiltersStorageKey()) || 'null');
+        } catch (e) {
+            console.warn('Restauration filtres Todo impossible :', e);
+        }
+    }
+    applyTodoFilterStateToControls(saved || TODO_FILTER_DEFAULTS);
 }
 
 
@@ -1089,27 +1276,368 @@ function normalizeRecurrence(recurrence) {
     return normalized;
 }
 
+function isPlainObject(value) {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function cloneJsonValue(value, fallback) {
+    try {
+        if (typeof value === 'undefined') return fallback;
+        return JSON.parse(JSON.stringify(value));
+    } catch (_) {
+        return fallback;
+    }
+}
+
+function makeFallbackId(index) {
+    const offset = Number.isFinite(index) ? index : Math.floor(Math.random() * 1000);
+    return Date.now() + offset;
+}
+
+function makeUniqueTaskId(index) {
+    let id = makeFallbackId(index);
+    while (tasks.some(function(task) { return String(task.id) === String(id); })) {
+        id += 1;
+    }
+    return id;
+}
+
 function normalizeSubtaskDates(subtask) {
-    subtask = subtask || {};
+    subtask = isPlainObject(subtask) ? subtask : { title: subtask };
     if (typeof subtask.title !== 'string') subtask.title = String(subtask.title || '');
+    subtask.title = subtask.title.trim();
     subtask.completed = !!subtask.completed;
     subtask.scheduledDate = isValidYmdDate(subtask.scheduledDate) ? subtask.scheduledDate : '';
-    subtask.scheduledTime = isValidScheduledTime(subtask.scheduledTime) ? subtask.scheduledTime : '';
+    subtask.scheduledTime = subtask.scheduledDate && isValidScheduledTime(subtask.scheduledTime) ? subtask.scheduledTime : '';
     subtask.recurrence = normalizeRecurrence(subtask.recurrence);
+    if (subtask.recurrence.enabled && !subtask.scheduledDate && subtask.recurrence.nextDate) {
+        subtask.scheduledDate = subtask.recurrence.nextDate;
+    }
     return subtask;
 }
 
-function normalizeTaskDates(task) {
-    task = task || {};
-    task.scheduledDate = isValidYmdDate(task.scheduledDate) ? task.scheduledDate : '';
-    task.scheduledTime = isValidScheduledTime(task.scheduledTime) ? task.scheduledTime : '';
-    task.recurrence = normalizeRecurrence(task.recurrence);
+function normalizeTaskDates(task, index) {
+    task = isPlainObject(task) ? task : { title: task };
+    if (typeof task.id === 'undefined' || task.id === null || task.id === '') {
+        task.id = makeFallbackId(index);
+    }
+    if (typeof task.title !== 'string') task.title = String(task.title || '');
+    task.title = task.title.trim() || 'Sans titre';
+    task.priority = ['low', 'medium', 'high'].indexOf(task.priority) >= 0 ? task.priority : 'medium';
+    task.category = String(task.category || '').trim() || 'Général';
+    task.completed = !!task.completed;
+    task.completionDate = task.completionDate ? String(task.completionDate) : null;
+    task.description = typeof task.description === 'string' ? task.description : String(task.description || '');
     task.subtasks = Array.isArray(task.subtasks) ? task.subtasks.map(normalizeSubtaskDates) : [];
+    task.dueDate = task.dueDate ? String(task.dueDate) : '';
+    task.dueDateDisplay = task.dueDateDisplay ? String(task.dueDateDisplay) : '';
+    task.scheduledDate = isValidYmdDate(task.scheduledDate) ? task.scheduledDate : '';
+    task.scheduledTime = task.scheduledDate && isValidScheduledTime(task.scheduledTime) ? task.scheduledTime : '';
+    task.recurrence = normalizeRecurrence(task.recurrence);
+    if (task.recurrence.enabled && !task.scheduledDate && task.recurrence.nextDate) {
+        task.scheduledDate = task.recurrence.nextDate;
+    }
+    task.expanded = typeof task.expanded === 'boolean' ? task.expanded : false;
     return task;
 }
 
 function normalizeTasksDates(taskArray) {
     return Array.isArray(taskArray) ? taskArray.map(normalizeTaskDates) : [];
+}
+
+function isValidCategoryColor(value) {
+    return /^#[0-9a-fA-F]{6}$/.test(String(value || ''));
+}
+
+function normalizeCategories(categoryArray, taskArray, options) {
+    options = options || {};
+    const result = [];
+    const seen = {};
+
+    function addCategory(name, color) {
+        const normalizedName = String(name || '').trim();
+        if (!normalizedName || seen[normalizedName]) return;
+        seen[normalizedName] = true;
+        result.push({
+            name: normalizedName,
+            color: isValidCategoryColor(color) ? String(color) : '#ffffff'
+        });
+    }
+
+    if (Array.isArray(categoryArray)) {
+        categoryArray.forEach(function(category) {
+            if (typeof category === 'string') {
+                addCategory(category, '#ffffff');
+            } else if (isPlainObject(category)) {
+                addCategory(category.name, category.color);
+            }
+        });
+    }
+
+    if (options.deriveFromTasks && Array.isArray(taskArray)) {
+        taskArray.forEach(function(task) {
+            if (task && task.category) addCategory(task.category, '#ffffff');
+        });
+    }
+
+    addCategory('Général', '#ffffff');
+    return result;
+}
+
+function normalizeSectionStatesValue(value) {
+    return isPlainObject(value) ? cloneJsonValue(value, {}) : {};
+}
+
+function normalizeSortCriteriaValue(value) {
+    return Array.isArray(value)
+        ? value.filter(function(criterion) { return typeof criterion === 'string' && criterion.trim(); })
+        : [];
+}
+
+function normalizeCalendarEventsValue(value) {
+    return Array.isArray(value) ? cloneJsonValue(value.filter(Boolean), []) : [];
+}
+
+const PROJECT_STATE_KNOWN_KEYS = {
+    tasks: true,
+    categories: true,
+    sectionStates: true,
+    sortCriteria: true,
+    projectTitle: true,
+    projectCelebrated: true,
+    projectCompletedAt: true,
+    calendarEvents: true
+};
+
+function collectProjectExtraState(source) {
+    const extras = {};
+    if (!isPlainObject(source)) return extras;
+    Object.keys(source).forEach(function(key) {
+        if (PROJECT_STATE_KNOWN_KEYS[key]) return;
+        if (typeof source[key] === 'undefined') return;
+        extras[key] = cloneJsonValue(source[key], source[key]);
+    });
+    return extras;
+}
+
+function applyProjectStateObject(source) {
+    if (!isPlainObject(source)) throw new Error('Etat projet invalide');
+    const rawTasks = Array.isArray(source.tasks) ? source.tasks : [];
+    const rawCategories = Array.isArray(source.categories) ? source.categories : [];
+    const shouldDeriveCategories = !rawCategories.length;
+
+    tasks = normalizeTasksDates(rawTasks);
+    categories = normalizeCategories(rawCategories, tasks, { deriveFromTasks: shouldDeriveCategories });
+    sectionStates = normalizeSectionStatesValue(source.sectionStates);
+    sortCriteria = normalizeSortCriteriaValue(source.sortCriteria);
+    projectTitle = String(source.projectTitle || '').trim() || 'TITRE';
+    projectCelebrated = !!source.projectCelebrated;
+    projectCompletedAt = source.projectCompletedAt ? String(source.projectCompletedAt) : null;
+    hasCalendarEventsField = Object.prototype.hasOwnProperty.call(source, 'calendarEvents');
+    calendarEvents = normalizeCalendarEventsValue(source.calendarEvents);
+    projectExtraState = collectProjectExtraState(source);
+}
+
+function getProjectStateObject() {
+    tasks = normalizeTasksDates(tasks);
+    categories = normalizeCategories(categories, tasks, { deriveFromTasks: false });
+
+    const data = cloneJsonValue(projectExtraState, {}) || {};
+    data.tasks = tasks;
+    data.categories = categories;
+    data.sectionStates = sectionStates;
+    data.sortCriteria = sortCriteria;
+    data.projectTitle = projectTitle || 'TITRE';
+    data.projectCelebrated = !!projectCelebrated;
+    data.projectCompletedAt = projectCompletedAt || null;
+    if (hasCalendarEventsField || calendarEvents.length) {
+        data.calendarEvents = normalizeCalendarEventsValue(calendarEvents);
+    }
+    return data;
+}
+
+function parseProjectJsonText(jsonText) {
+    const data = JSON.parse(String(jsonText || '').trim());
+    if (!isPlainObject(data)) throw new Error('JSON projet invalide');
+    return data;
+}
+
+function parsePatchJsonText(jsonText) {
+    const data = JSON.parse(String(jsonText || '').trim());
+    if (!isPlainObject(data)) throw new Error('JSON patch invalide');
+    return data;
+}
+
+function getPatchArray(patch, key, warnings) {
+    if (!Object.prototype.hasOwnProperty.call(patch, key) || typeof patch[key] === 'undefined' || patch[key] === null) {
+        return [];
+    }
+    if (!Array.isArray(patch[key])) {
+        warnings.push(`${key} ignoré : un tableau est attendu.`);
+        return [];
+    }
+    return patch[key];
+}
+
+function categoryExists(categoryName) {
+    const wanted = String(categoryName || '').trim();
+    return !!wanted && categories.some(function(category) { return category.name === wanted; });
+}
+
+function addCategoryIfMissing(categoryName, color) {
+    const name = String(categoryName || '').trim();
+    if (!name || categoryExists(name)) return false;
+    categories.push({
+        name: name,
+        color: isValidCategoryColor(color) ? String(color) : '#ffffff'
+    });
+    return true;
+}
+
+function normalizePatchDueDate(rawTask, warnings, label) {
+    const rawDueDate = String(rawTask.dueDate || '').trim();
+    if (rawDueDate) {
+        const parsedDueDate = new Date(rawDueDate);
+        if (!isNaN(parsedDueDate.getTime())) {
+            return parsedDueDate.toISOString();
+        }
+        warnings.push(`${label} : dueDate invalide ignorée.`);
+    }
+
+    const dueDateDisplay = String(rawTask.dueDateDisplay || '').trim();
+    if (dueDateDisplay) {
+        const parsedDisplayDate = parseDate(dueDateDisplay);
+        if (parsedDisplayDate) return parsedDisplayDate.toISOString();
+        warnings.push(`${label} : dueDateDisplay invalide ignoré.`);
+    }
+
+    return '';
+}
+
+function normalizePatchScheduledDate(rawItem, warnings, label) {
+    const scheduledDate = String(rawItem.scheduledDate || '').trim();
+    if (!scheduledDate) return '';
+    if (isValidYmdDate(scheduledDate)) return scheduledDate;
+    warnings.push(`${label} : scheduledDate invalide ignorée.`);
+    return '';
+}
+
+function normalizePatchScheduledTime(rawItem, scheduledDate, warnings, label) {
+    const scheduledTime = String(rawItem.scheduledTime || '').trim();
+    if (!scheduledTime) return '';
+    if (!scheduledDate) {
+        warnings.push(`${label} : scheduledTime ignorée sans scheduledDate.`);
+        return '';
+    }
+    if (isValidScheduledTime(scheduledTime)) return scheduledTime;
+    warnings.push(`${label} : scheduledTime invalide ignorée.`);
+    return '';
+}
+
+function buildPatchSubtask(rawSubtask, warnings, label) {
+    if (!isPlainObject(rawSubtask)) {
+        warnings.push(`${label} ignorée : objet attendu.`);
+        return null;
+    }
+    const title = String(rawSubtask.title || '').trim();
+    if (!title) {
+        warnings.push(`${label} ignorée : title obligatoire.`);
+        return null;
+    }
+
+    const scheduledDate = normalizePatchScheduledDate(rawSubtask, warnings, label);
+    const scheduledTime = normalizePatchScheduledTime(rawSubtask, scheduledDate, warnings, label);
+    return normalizeSubtaskDates({
+        title: title,
+        completed: false,
+        scheduledDate: scheduledDate,
+        scheduledTime: scheduledTime,
+        recurrence: normalizeRecurrence(rawSubtask.recurrence)
+    });
+}
+
+function buildPatchTask(rawTask, index, warnings) {
+    const label = `Tâche ${index + 1}`;
+    if (!isPlainObject(rawTask)) {
+        warnings.push(`${label} ignorée : objet attendu.`);
+        return null;
+    }
+
+    const title = String(rawTask.title || '').trim();
+    if (!title) {
+        warnings.push(`${label} ignorée : title obligatoire.`);
+        return null;
+    }
+
+    const categoryName = String(rawTask.category || '').trim() || 'Général';
+    addCategoryIfMissing(categoryName, '#ffffff');
+
+    const priority = ['low', 'medium', 'high'].indexOf(rawTask.priority) >= 0 ? rawTask.priority : 'medium';
+    const dueDateDisplay = String(rawTask.dueDateDisplay || '').trim();
+    const dueDate = normalizePatchDueDate(rawTask, warnings, label);
+    const scheduledDate = normalizePatchScheduledDate(rawTask, warnings, label);
+    const scheduledTime = normalizePatchScheduledTime(rawTask, scheduledDate, warnings, label);
+    const rawSubtasks = Array.isArray(rawTask.subtasks) ? rawTask.subtasks : [];
+    if (Object.prototype.hasOwnProperty.call(rawTask, 'subtasks') && !Array.isArray(rawTask.subtasks)) {
+        warnings.push(`${label} : subtasks ignoré, un tableau est attendu.`);
+    }
+
+    const subtasks = rawSubtasks.map(function(subtask, subIndex) {
+        return buildPatchSubtask(subtask, warnings, `${label}, sous-tâche ${subIndex + 1}`);
+    }).filter(Boolean);
+
+    return normalizeTaskDates({
+        id: makeUniqueTaskId(index),
+        title: title,
+        priority: priority,
+        category: categoryName,
+        completed: false,
+        completionDate: null,
+        description: String(rawTask.description || ''),
+        subtasks: subtasks,
+        dueDate: dueDate,
+        dueDateDisplay: dueDateDisplay,
+        scheduledDate: scheduledDate,
+        scheduledTime: scheduledTime,
+        recurrence: normalizeRecurrence(rawTask.recurrence),
+        expanded: false
+    }, index);
+}
+
+function findPatchParentTask(rawSubtask, warnings, label) {
+    const parentTaskId = typeof rawSubtask.parentTaskId !== 'undefined' && rawSubtask.parentTaskId !== null
+        ? String(rawSubtask.parentTaskId)
+        : '';
+    if (parentTaskId) {
+        const taskById = tasks.find(function(task) { return String(task.id) === parentTaskId; });
+        if (taskById) return taskById;
+        warnings.push(`${label} ignorée : parentTaskId introuvable.`);
+        return null;
+    }
+
+    const parentTaskTitle = String(rawSubtask.parentTaskTitle || '').trim();
+    if (parentTaskTitle) {
+        const matches = tasks.filter(function(task) { return task.title === parentTaskTitle; });
+        if (matches.length > 1) {
+            warnings.push(`${label} : plusieurs tâches portent ce titre, première utilisée.`);
+        }
+        if (matches.length) return matches[0];
+        warnings.push(`${label} ignorée : parentTaskTitle introuvable.`);
+        return null;
+    }
+
+    warnings.push(`${label} ignorée : parentTaskId ou parentTaskTitle obligatoire.`);
+    return null;
+}
+
+function formatPatchSummary(result) {
+    const parts = [];
+    if (result.tasksAdded) parts.push(`${result.tasksAdded} tâche${result.tasksAdded > 1 ? 's' : ''} ajoutée${result.tasksAdded > 1 ? 's' : ''}`);
+    if (result.categoriesAdded) parts.push(`${result.categoriesAdded} catégorie${result.categoriesAdded > 1 ? 's' : ''} ajoutée${result.categoriesAdded > 1 ? 's' : ''}`);
+    if (result.subtasksAdded) parts.push(`${result.subtasksAdded} sous-tâche${result.subtasksAdded > 1 ? 's' : ''} ajoutée${result.subtasksAdded > 1 ? 's' : ''}`);
+    const summary = parts.length ? `Patch appliqué : ${parts.join(', ')}.` : 'Aucune donnée à ajouter';
+    if (!result.warnings.length) return summary;
+    return `${summary} Avertissements : ${result.warnings.slice(0, 3).join(' ')}`;
 }
 
 function formatYmdToFrenchDate(value) {
@@ -1370,39 +1898,29 @@ function buildRecurrenceFromSelection(item, selection) {
             }
 
             try {
-                const data = JSON.parse(jsonText || '{}');
-                tasks = normalizeTasksDates(data.tasks || []);
-                categories = data.categories || [];
-                sectionStates = data.sectionStates || {};
-                sortCriteria = data.sortCriteria || [];
-                projectTitle = data.projectTitle || 'TITRE';
-                // Ne pas restaurer les drapeaux éphémères depuis le stockage local
-                projectCelebrated = false;
-                projectCompletedAt = null;
+                applyProjectStateObject(JSON.parse(jsonText || '{}'));
             } catch (e) {
                 console.warn('Erreur chargement :', e);
                 tasks = [];
-                categories = [];
+                categories = normalizeCategories([], [], { deriveFromTasks: false });
                 sectionStates = {};
                 sortCriteria = [];
                 projectTitle = 'TITRE';
                 projectCelebrated = false;
                 projectCompletedAt = null;
-            }
-
-            if (!categories.some(cat => cat.name === 'Général')) {
-                categories.push({ name: 'Général', color: '#ffffff' });
+                calendarEvents = [];
+                hasCalendarEventsField = false;
+                projectExtraState = {};
             }
         }
 
 function saveData() {
     const syncTextarea = document.getElementById('sync-data');
-    tasks = normalizeTasksDates(tasks);
-    const data = { tasks, categories, sectionStates, sortCriteria, projectTitle, projectCelebrated, projectCompletedAt };
+    const data = getProjectStateObject();
     const jsonData = JSON.stringify(data, null, 2);
 
     // Écrit dans le <textarea> (compatibilité + export manuel)
-    syncTextarea.value = jsonData;
+    if (syncTextarea) syncTextarea.value = jsonData;
 
     // Essaie d’écrire dans localStorage
     if (canUseLocalStorage) {
@@ -1426,45 +1944,195 @@ function saveData() {
 
         function updateSyncBox() {
             const syncBox = document.getElementById('sync-box');
-            tasks = normalizeTasksDates(tasks);
-            const data = { tasks, categories, sectionStates, sortCriteria, projectTitle, projectCelebrated, projectCompletedAt };
-            syncBox.value = JSON.stringify(data, null, 2);
+            if (!syncBox) return;
+            syncBox.value = JSON.stringify(getProjectStateObject(), null, 2);
         }
 
 // === Synchronisation iCloud via Raccourcis ===
 // Renvoie l'état complet au format JSON (string)
 function todoGetState() {
-    tasks = normalizeTasksDates(tasks);
-    const data = { tasks, categories, sectionStates, sortCriteria, projectTitle, projectCelebrated, projectCompletedAt };
-    return JSON.stringify(data);
+    return JSON.stringify(getProjectStateObject());
 }
 
 // Charge un état JSON (string ou objet) et réaffiche
-function todoSetState(state) {
+function todoSetState(state, options) {
+    options = options || {};
     try {
         const obj = (typeof state === 'string') ? JSON.parse(state) : state;
-        tasks = normalizeTasksDates(obj.tasks || []);
-        categories = obj.categories || [];
-        sectionStates = obj.sectionStates || {};
-        sortCriteria = obj.sortCriteria || [];
-        projectTitle = obj.projectTitle || 'TITRE';
+        applyProjectStateObject(obj);
 
         // Persiste aussi dans localStorage / <textarea>
         saveData();
 
         // Rafraîchit l'UI
         renderCategories();
+        restoreTodoFilterState();
         renderTasks();
         applySectionStates();
         updateSyncBox();
         renderTitle();
+        syncSortButtons();
         // Vérifie si le projet doit déclencher/masquer le feu d’artifice après un chargement d’état
-        try { checkProjectCompletion(); } catch (_) {}
+        if (!options.skipCompletionCheck) {
+            try { checkProjectCompletion(); } catch (_) {}
+        }
         return true;
     } catch (e) {
         console.warn('todoSetState: JSON invalide', e);
         return false;
     }
+}
+
+function setJsonImportStatus(message, isError) {
+    const status = document.getElementById('sync-import-status');
+    if (!status) return;
+    status.textContent = message || '';
+    status.classList.toggle('error', !!isError);
+    clearTimeout(status._clearTimer);
+    if (message && !isError) {
+        status._clearTimer = setTimeout(function() {
+            status.textContent = '';
+        }, 2500);
+    }
+}
+
+function setPatchStatus(message, type) {
+    const status = document.getElementById('patch-status');
+    if (!status) return;
+    status.textContent = message || '';
+    status.classList.toggle('error', type === 'error');
+    status.classList.toggle('warning', type === 'warning');
+    clearTimeout(status._clearTimer);
+    if (message && !type) {
+        status._clearTimer = setTimeout(function() {
+            status.textContent = '';
+        }, 3500);
+    }
+}
+
+function importProjectJson(jsonText, options) {
+    options = options || {};
+    try {
+        const data = parseProjectJsonText(jsonText);
+        const imported = todoSetState(data, { fromImport: true });
+        if (!imported) {
+            if (!options.silentInvalid) setJsonImportStatus('JSON invalide', true);
+            return false;
+        }
+        setJsonImportStatus('JSON restauré', false);
+        if (!options.silentSuccess) console.log('JSON TodoPro restauré');
+        return true;
+    } catch (e) {
+        if (!options.silentInvalid) {
+            console.warn('Import JSON invalide', e);
+            setJsonImportStatus('JSON invalide', true);
+        }
+        return false;
+    }
+}
+
+function applyPatchJson(jsonText) {
+    let patch;
+    try {
+        patch = parsePatchJsonText(jsonText);
+    } catch (e) {
+        console.warn('Patch JSON invalide', e);
+        setPatchStatus('JSON invalide', 'error');
+        return false;
+    }
+
+    const result = {
+        tasksAdded: 0,
+        categoriesAdded: 0,
+        subtasksAdded: 0,
+        warnings: []
+    };
+
+    const categoriesToAdd = getPatchArray(patch, 'categoriesToAdd', result.warnings);
+    const tasksToAdd = getPatchArray(patch, 'tasksToAdd', result.warnings);
+    const subtasksToAdd = getPatchArray(patch, 'subtasksToAdd', result.warnings);
+
+    categories = normalizeCategories(categories, tasks, { deriveFromTasks: false });
+
+    categoriesToAdd.forEach(function(rawCategory, index) {
+        const label = `Catégorie ${index + 1}`;
+        if (!isPlainObject(rawCategory)) {
+            result.warnings.push(`${label} ignorée : objet attendu.`);
+            return;
+        }
+        const name = String(rawCategory.name || '').trim();
+        if (!name) {
+            result.warnings.push(`${label} ignorée : name obligatoire.`);
+            return;
+        }
+        if (addCategoryIfMissing(name, rawCategory.color)) {
+            result.categoriesAdded += 1;
+        }
+    });
+
+    tasksToAdd.forEach(function(rawTask, index) {
+        const task = buildPatchTask(rawTask, index, result.warnings);
+        if (!task) return;
+        tasks.push(task);
+        result.tasksAdded += 1;
+        if (projectCelebrated) {
+            projectCelebrated = false;
+            projectCompletedAt = null;
+        }
+    });
+
+    subtasksToAdd.forEach(function(rawSubtask, index) {
+        const label = `Sous-tâche ${index + 1}`;
+        if (!isPlainObject(rawSubtask)) {
+            result.warnings.push(`${label} ignorée : objet attendu.`);
+            return;
+        }
+        const parentTask = findPatchParentTask(rawSubtask, result.warnings, label);
+        if (!parentTask) return;
+        const subtask = buildPatchSubtask(rawSubtask, result.warnings, label);
+        if (!subtask) return;
+        parentTask.subtasks = Array.isArray(parentTask.subtasks) ? parentTask.subtasks : [];
+        parentTask.subtasks.push(subtask);
+        normalizeTaskDates(parentTask);
+        result.subtasksAdded += 1;
+    });
+
+    const hasChanges = result.tasksAdded || result.categoriesAdded || result.subtasksAdded;
+    if (!hasChanges) {
+        const message = formatPatchSummary(result);
+        setPatchStatus(message, 'warning');
+        if (result.warnings.length) console.warn('Patch JSON sans ajout valide', result.warnings);
+        return false;
+    }
+
+    saveData();
+    renderCategories();
+    renderTasks();
+    applySectionStates();
+    updateSyncBox();
+    setPatchStatus(formatPatchSummary(result), result.warnings.length ? 'warning' : null);
+    if (result.warnings.length) console.warn('Patch JSON appliqué avec avertissements', result.warnings);
+    return true;
+}
+
+function isProjectJsonTextValid(jsonText) {
+    try {
+        parseProjectJsonText(jsonText);
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
+
+function syncSortButtons() {
+    document.querySelectorAll('.sort-button').forEach(function(button) {
+        const criterion = button.getAttribute('data-sort');
+        if (sortCriteria.includes(criterion)) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+    });
 }
 
 function checkProjectCompletion() {
@@ -1649,6 +2317,13 @@ function renderTitle() {
 if (typeof window !== 'undefined') {
     window.todoGetState = todoGetState;
     window.todoSetState = todoSetState;
+    window.importProjectJson = importProjectJson;
+    window.applyPatchJson = applyPatchJson;
+    window.getTodoFiltersStorageKey = getTodoFiltersStorageKey;
+    window.getTodoFilterState = getTodoFilterState;
+    window.saveTodoFilterState = saveTodoFilterState;
+    window.restoreTodoFilterState = restoreTodoFilterState;
+    window.applyTodoFilterStateToControls = applyTodoFilterStateToControls;
 }
 
 // C4 — Accessibilité des boutons globaux (type="button" + aria-disabled synchronisé)
@@ -1836,17 +2511,18 @@ async function cloudSave(options) {
                 if (e.key === STORAGE_KEY && canUseLocalStorage) {
                     try {
                         const data = JSON.parse(e.newValue || '{}');
-                        tasks = normalizeTasksDates(data.tasks || []);
-                        categories = data.categories || [];
-                        sectionStates = data.sectionStates || {};
-                        sortCriteria = data.sortCriteria || [];
-                        projectTitle = data.projectTitle || 'TITRE';
+                        applyProjectStateObject(data);
                         renderCategories();
+                        restoreTodoFilterState();
                         renderTasks();
                         applySectionStates();
                         updateSyncBox();
                         renderTitle();
+                        syncSortButtons();
                     } catch (_) {}
+                } else if (e.key === getTodoFiltersStorageKey() && canUseLocalStorage) {
+                    restoreTodoFilterState();
+                    renderTasks();
                 }
             });
         }
@@ -1878,6 +2554,7 @@ async function cloudSave(options) {
         // Rendre les catégories
         function renderCategories() {
             const categoryList = document.getElementById('category-list');
+            const currentFilterState = getTodoFilterState();
             categoryList.innerHTML = '';
             categories.forEach((category, index) => {
                 const li = document.createElement('li');
@@ -1983,6 +2660,7 @@ async function cloudSave(options) {
                 option.textContent = category.name;
                 filterCategorySelect.appendChild(option);
             });
+            applyTodoFilterStateToControls(currentFilterState);
             // Appel récursif pour garantir la mise à jour (évite les problèmes d'affichage)
             // (Cet appel est utile si, par exemple, le DOM n'était pas prêt lors de la première exécution.)
             // Mais attention à ne pas créer de boucle infinie ! On ne le fait qu'une fois ici.
@@ -3457,15 +4135,10 @@ function toggleTaskCompletion(taskId) {
         // Fonction pour appliquer les filtres
         function applyFilters(taskArray) {
             let filteredTasks = [...taskArray];
+            const filterState = getTodoFilterState();
 
             // Filtre par statut (toutes, complétées, actives)
-            const statusFilterButtons = document.querySelectorAll('[data-filter]');
-            let statusFilter = 'all';
-            statusFilterButtons.forEach(button => {
-                if (button.classList.contains('active-filter')) {
-                    statusFilter = button.getAttribute('data-filter');
-                }
-            });
+            const statusFilter = filterState.status;
 
             if (statusFilter === 'completed') {
                 filteredTasks = filteredTasks.filter(task => task.completed);
@@ -3474,19 +4147,19 @@ function toggleTaskCompletion(taskId) {
             }
 
             // Filtre par catégorie
-            const categoryFilter = document.getElementById('filter-category').value;
+            const categoryFilter = filterState.category;
             if (categoryFilter !== 'all') {
                 filteredTasks = filteredTasks.filter(task => task.category === categoryFilter);
             }
 
             // Filtre par priorité
-            const priorityFilter = document.getElementById('filter-priority').value;
+            const priorityFilter = filterState.priority;
             if (priorityFilter !== 'all') {
                 filteredTasks = filteredTasks.filter(task => task.priority === priorityFilter);
             }
 
             // Filtre par date
-            const dateFilter = document.getElementById('filter-date').value;
+            const dateFilter = filterState.date;
             if (dateFilter !== 'all') {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -3558,6 +4231,7 @@ function toggleTaskCompletion(taskId) {
                     });
                     this.classList.add('active-filter');
                     this.setAttribute('aria-pressed', 'true');
+                    saveTodoFilterState();
                     renderTasks();
                 });
             });
@@ -3577,9 +4251,18 @@ function toggleTaskCompletion(taskId) {
         })();
 
         // Filtrer les tâches par catégorie, priorité et date
-        document.getElementById('filter-category').addEventListener('change', renderTasks);
-        document.getElementById('filter-priority').addEventListener('change', renderTasks);
-        document.getElementById('filter-date').addEventListener('change', renderTasks);
+        document.getElementById('filter-category').addEventListener('change', function() {
+            saveTodoFilterState();
+            renderTasks();
+        });
+        document.getElementById('filter-priority').addEventListener('change', function() {
+            saveTodoFilterState();
+            renderTasks();
+        });
+        document.getElementById('filter-date').addEventListener('change', function() {
+            saveTodoFilterState();
+            renderTasks();
+        });
 
         // Gestion des boutons de tri
         document.querySelectorAll('.sort-button').forEach(button => {
@@ -3860,21 +4543,65 @@ function toggleTaskCompletion(taskId) {
             });
         })();
 
+        (function bindProjectJsonImport() {
+            const syncBox = document.getElementById('sync-box');
+            const restoreButton = document.getElementById('restore-json-btn');
+            if (!syncBox) return;
 
-        document.getElementById('sync-box').addEventListener('input', function() {
-            try {
-                const data = JSON.parse(this.value);
-                tasks = normalizeTasksDates(data.tasks || []);
-                categories = data.categories || [];
-                sectionStates = data.sectionStates || {};
-                sortCriteria = data.sortCriteria || [];
-                renderCategories();
-                renderTasks();
-               // applySectionStates();
-            } catch (e) {
-                // Ne rien faire si l’utilisateur colle quelque chose d'invalide
+            let pasteTimer = null;
+
+            function importFromSyncBox(options) {
+                return importProjectJson(syncBox.value, options || {});
             }
-        });
+
+            syncBox.addEventListener('paste', function() {
+                if (pasteTimer) clearTimeout(pasteTimer);
+                pasteTimer = setTimeout(function() {
+                    pasteTimer = null;
+                    importFromSyncBox({ source: 'paste' });
+                }, 50);
+            });
+
+            syncBox.addEventListener('input', function() {
+                if (pasteTimer) return;
+                if (isProjectJsonTextValid(syncBox.value)) {
+                    importFromSyncBox({ source: 'input', silentInvalid: true, silentSuccess: true });
+                }
+            });
+
+            syncBox.addEventListener('change', function() {
+                importFromSyncBox({ source: 'change' });
+            });
+
+            syncBox.addEventListener('blur', function() {
+                importFromSyncBox({ source: 'blur', silentInvalid: true });
+            });
+
+            if (restoreButton) {
+                restoreButton.addEventListener('click', function() {
+                    importFromSyncBox({ source: 'button' });
+                });
+            }
+        })();
+
+        (function bindPatchJsonImport() {
+            const patchBox = document.getElementById('patch-box');
+            const applyButton = document.getElementById('apply-patch-btn');
+            const clearButton = document.getElementById('clear-patch-btn');
+            if (!patchBox || !applyButton) return;
+
+            applyButton.addEventListener('click', function() {
+                applyPatchJson(patchBox.value);
+            });
+
+            if (clearButton) {
+                clearButton.addEventListener('click', function() {
+                    patchBox.value = '';
+                    setPatchStatus('', null);
+                    patchBox.focus();
+                });
+            }
+        })();
 
         // Gestion des sections repliables
         function setupCollapsibleSections() {
@@ -3945,6 +4672,7 @@ function toggleTaskCompletion(taskId) {
             loadData();
             updateTopTabs();
             renderCategories();
+            restoreTodoFilterState();
             renderTasks();
             setupCollapsibleSections();
             applySectionStates();
@@ -3962,14 +4690,7 @@ function toggleTaskCompletion(taskId) {
             document.getElementById('new-category-color').dispatchEvent(new Event('change'));
 
             // Réinitialiser les boutons de tri
-            document.querySelectorAll('.sort-button').forEach(button => {
-                const criterion = button.getAttribute('data-sort');
-                if (sortCriteria.includes(criterion)) {
-                    button.classList.add('active');
-                } else {
-                    button.classList.remove('active');
-                }
-            });
+            syncSortButtons();
             renderTitle();
             const titleInput = document.getElementById('project-title-input');
             if (titleInput) {

@@ -320,6 +320,58 @@
             font-weight: 600;
         }
 
+        #toggle-calendar-filters-btn.active {
+            background-color: #555555;
+            box-shadow: 0 0 0 1px #777777 inset;
+            font-weight: 600;
+        }
+
+        .calendar-filters-panel {
+            display: none;
+            max-width: 1120px;
+            margin: -6px auto 16px;
+            padding: 12px;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            background: #181818;
+        }
+
+        .calendar-filters-panel.open {
+            display: block;
+        }
+
+        .calendar-filter-row {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(150px, 1fr));
+            gap: 10px;
+            align-items: end;
+        }
+
+        .calendar-filter-group label {
+            margin-bottom: 4px;
+        }
+
+        .calendar-filter-group select {
+            margin-bottom: 0;
+        }
+
+        .calendar-filter-status {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .calendar-status-filter-btn.active {
+            background-color: #555555;
+            box-shadow: 0 0 0 1px #777777 inset;
+            font-weight: 600;
+        }
+
+        .calendar-filter-actions {
+            display: flex;
+            align-items: end;
+        }
+
         .calendar-period-nav {
             flex: 1 1 420px;
             min-width: 280px;
@@ -708,6 +760,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .calendar-filter-row {
+                grid-template-columns: 1fr 1fr;
+            }
+
             .calendar-day {
                 min-height: 98px;
                 padding: 6px;
@@ -721,6 +777,10 @@
 
             .calendar-toolbar {
                 gap: 8px;
+            }
+
+            .calendar-filter-row {
+                grid-template-columns: 1fr;
             }
 
             #calendar-month-label {
@@ -883,9 +943,61 @@
         </div>
         <div class="calendar-toolbar-actions">
             <button id="today-btn" type="button">Aujourd'hui</button>
+            <button id="toggle-calendar-filters-btn" type="button" aria-expanded="false" aria-controls="calendar-filters-panel">Filtres ▼</button>
             <button id="toggle-side-panel-btn" type="button">Masquer le panneau</button>
         </div>
     </div>
+
+    <section id="calendar-filters-panel" class="calendar-filters-panel" aria-label="Filtres calendrier">
+        <div class="calendar-filter-row">
+            <div class="calendar-filter-group">
+                <label>Statut</label>
+                <div class="calendar-filter-status" id="calendar-filter-status-group" role="group" aria-label="Filtrer par statut">
+                    <button class="calendar-status-filter-btn active" type="button" data-calendar-status="all" aria-pressed="true">Toutes</button>
+                    <button class="calendar-status-filter-btn" type="button" data-calendar-status="completed" aria-pressed="false">Complétées</button>
+                    <button class="calendar-status-filter-btn" type="button" data-calendar-status="active" aria-pressed="false">Actives</button>
+                </div>
+            </div>
+            <div class="calendar-filter-group">
+                <label for="calendar-filter-category">Catégorie</label>
+                <select id="calendar-filter-category" name="calendar-filter-category">
+                    <option value="all">Toutes</option>
+                </select>
+            </div>
+            <div class="calendar-filter-group">
+                <label for="calendar-filter-priority">Priorité</label>
+                <select id="calendar-filter-priority" name="calendar-filter-priority">
+                    <option value="all">Toutes</option>
+                    <option value="high">Haute</option>
+                    <option value="medium">Moyenne</option>
+                    <option value="low">Basse</option>
+                </select>
+            </div>
+            <div class="calendar-filter-group">
+                <label for="calendar-filter-type">Type d’élément</label>
+                <select id="calendar-filter-type" name="calendar-filter-type">
+                    <option value="all">Tous</option>
+                    <option value="scheduled-task">Tâches planifiées</option>
+                    <option value="scheduled-subtask">Sous-tâches planifiées</option>
+                    <option value="recurring">Récurrences</option>
+                    <option value="deadline">Échéances</option>
+                </select>
+            </div>
+            <div class="calendar-filter-group">
+                <label for="calendar-filter-date">Date</label>
+                <select id="calendar-filter-date" name="calendar-filter-date">
+                    <option value="all">Toutes</option>
+                    <option value="today">Aujourd'hui</option>
+                    <option value="this_week">Cette semaine</option>
+                    <option value="this_month">Ce mois</option>
+                    <option value="overdue">En retard</option>
+                </select>
+            </div>
+            <div class="calendar-filter-actions">
+                <button id="reset-calendar-filters-btn" type="button">Réinitialiser les filtres</button>
+            </div>
+        </div>
+    </section>
 
     <div class="calendar-page" id="calendar-page">
         <main class="calendar-board" aria-label="Calendrier mensuel">
@@ -964,6 +1076,14 @@
         let calendarSubtaskRecurringItems = [];
         let calendarTodoCategories = [{ name: 'Général', color: '#ffffff' }];
         let calendarTodoState = {};
+        let calendarFilterState = {
+            status: 'all',
+            category: 'all',
+            priority: 'all',
+            type: 'all',
+            date: 'all',
+            panelOpen: false
+        };
         let calendarModalTodoTaskId = null;
         let calendarModalTodoTask = null;
         let calendarModalFocusSubtaskIndex = null;
@@ -977,6 +1097,14 @@
 
         const CALENDAR_AUTOSAVE_DELAY = 800;
         const CALENDAR_STORAGE_BASE = 'CalendarProV1';
+        const CALENDAR_FILTER_DEFAULTS = {
+            status: 'all',
+            category: 'all',
+            priority: 'all',
+            type: 'all',
+            date: 'all',
+            panelOpen: false
+        };
         const CALENDAR_CLOUD_BADGE_MODE = 'errors';
         const CALENDAR_UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
         const TODO_PAGE_NAME = 'todo.html';
@@ -1007,6 +1135,11 @@
         function calendarStorageKey() {
             const key = calendarActiveKey();
             return key ? `${CALENDAR_STORAGE_BASE}:${key}` : CALENDAR_STORAGE_BASE;
+        }
+
+        function getCalendarFiltersStorageKey() {
+            const key = calendarActiveKey();
+            return `CalendarFilters:${key || 'default'}`;
         }
 
         function calendarSharedKeyStorageKey() {
@@ -1081,6 +1214,139 @@
             } else {
                 select.value = categories[0].name;
             }
+        }
+
+        function calendarIsPlainObject(value) {
+            return !!value && typeof value === 'object' && !Array.isArray(value);
+        }
+
+        function normalizeCalendarFilterState(raw) {
+            raw = calendarIsPlainObject(raw) ? raw : {};
+            const status = ['all', 'completed', 'active'].indexOf(raw.status) >= 0 ? raw.status : CALENDAR_FILTER_DEFAULTS.status;
+            const priority = ['all', 'high', 'medium', 'low'].indexOf(raw.priority) >= 0 ? raw.priority : CALENDAR_FILTER_DEFAULTS.priority;
+            const type = ['all', 'scheduled-task', 'scheduled-subtask', 'recurring', 'deadline'].indexOf(raw.type) >= 0 ? raw.type : CALENDAR_FILTER_DEFAULTS.type;
+            const date = ['all', 'today', 'this_week', 'this_month', 'overdue'].indexOf(raw.date) >= 0 ? raw.date : CALENDAR_FILTER_DEFAULTS.date;
+            return {
+                status: status,
+                category: typeof raw.category === 'string' && raw.category.trim() ? raw.category : CALENDAR_FILTER_DEFAULTS.category,
+                priority: priority,
+                type: type,
+                date: date,
+                panelOpen: typeof raw.panelOpen === 'boolean' ? raw.panelOpen : CALENDAR_FILTER_DEFAULTS.panelOpen
+            };
+        }
+
+        function calendarSetSelectValueIfAvailable(select, value, fallback) {
+            if (!select) return;
+            const wanted = String(value || fallback || 'all');
+            const hasWanted = Array.prototype.some.call(select.options || [], function (option) {
+                return option.value === wanted;
+            });
+            select.value = hasWanted ? wanted : fallback;
+        }
+
+        function calendarSetStatusFilter(status) {
+            const normalized = normalizeCalendarFilterState({ status }).status;
+            document.querySelectorAll('#calendar-filter-status-group [data-calendar-status]').forEach(function (button) {
+                const active = button.getAttribute('data-calendar-status') === normalized;
+                button.classList.toggle('active', active);
+                button.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+        }
+
+        function calendarRenderFilterCategoryOptions() {
+            const select = document.getElementById('calendar-filter-category');
+            if (!select) return;
+            const wanted = calendarFilterState.category || CALENDAR_FILTER_DEFAULTS.category;
+            const categories = calendarTodoCategories.length ? calendarTodoCategories : [{ name: 'Général', color: '#ffffff' }];
+            select.innerHTML = '';
+            const allOption = document.createElement('option');
+            allOption.value = 'all';
+            allOption.textContent = 'Toutes';
+            select.appendChild(allOption);
+            categories.forEach(function (category) {
+                const option = document.createElement('option');
+                option.value = category.name;
+                option.textContent = category.name;
+                select.appendChild(option);
+            });
+            calendarSetSelectValueIfAvailable(select, wanted, CALENDAR_FILTER_DEFAULTS.category);
+            if (calendarTodoState && Array.isArray(calendarTodoState.categories) && select.value !== wanted) {
+                calendarFilterState.category = select.value;
+            }
+        }
+
+        function applyCalendarFilterPanelState() {
+            const panel = document.getElementById('calendar-filters-panel');
+            const button = document.getElementById('toggle-calendar-filters-btn');
+            const open = !!calendarFilterState.panelOpen;
+            if (panel) panel.classList.toggle('open', open);
+            if (button) {
+                button.classList.toggle('active', open);
+                button.setAttribute('aria-expanded', open ? 'true' : 'false');
+                button.textContent = open ? 'Filtres ▲' : 'Filtres ▼';
+            }
+        }
+
+        function applyCalendarFilterStateToControls(state) {
+            calendarFilterState = normalizeCalendarFilterState(state);
+            calendarSetStatusFilter(calendarFilterState.status);
+            calendarRenderFilterCategoryOptions();
+            calendarSetSelectValueIfAvailable(document.getElementById('calendar-filter-priority'), calendarFilterState.priority, CALENDAR_FILTER_DEFAULTS.priority);
+            calendarSetSelectValueIfAvailable(document.getElementById('calendar-filter-type'), calendarFilterState.type, CALENDAR_FILTER_DEFAULTS.type);
+            calendarSetSelectValueIfAvailable(document.getElementById('calendar-filter-date'), calendarFilterState.date, CALENDAR_FILTER_DEFAULTS.date);
+            applyCalendarFilterPanelState();
+        }
+
+        function getCalendarFilterState() {
+            let status = calendarFilterState.status || CALENDAR_FILTER_DEFAULTS.status;
+            document.querySelectorAll('#calendar-filter-status-group [data-calendar-status]').forEach(function (button) {
+                if (button.classList.contains('active')) {
+                    status = button.getAttribute('data-calendar-status') || CALENDAR_FILTER_DEFAULTS.status;
+                }
+            });
+            const categorySelect = document.getElementById('calendar-filter-category');
+            const prioritySelect = document.getElementById('calendar-filter-priority');
+            const typeSelect = document.getElementById('calendar-filter-type');
+            const dateSelect = document.getElementById('calendar-filter-date');
+            return normalizeCalendarFilterState({
+                status: status,
+                category: categorySelect ? categorySelect.value : calendarFilterState.category,
+                priority: prioritySelect ? prioritySelect.value : calendarFilterState.priority,
+                type: typeSelect ? typeSelect.value : calendarFilterState.type,
+                date: dateSelect ? dateSelect.value : calendarFilterState.date,
+                panelOpen: !!calendarFilterState.panelOpen
+            });
+        }
+
+        function saveCalendarFilterState() {
+            calendarFilterState = getCalendarFilterState();
+            if (!calendarCanUseLocalStorage) return;
+            try {
+                localStorage.setItem(getCalendarFiltersStorageKey(), JSON.stringify(calendarFilterState));
+            } catch (e) {
+                console.warn('Sauvegarde filtres calendrier impossible :', e);
+            }
+        }
+
+        function restoreCalendarFilterState() {
+            let saved = null;
+            if (calendarCanUseLocalStorage) {
+                try {
+                    saved = JSON.parse(localStorage.getItem(getCalendarFiltersStorageKey()) || 'null');
+                } catch (e) {
+                    console.warn('Restauration filtres calendrier impossible :', e);
+                }
+            }
+            applyCalendarFilterStateToControls(saved || CALENDAR_FILTER_DEFAULTS);
+        }
+
+        function resetCalendarFilterState() {
+            applyCalendarFilterStateToControls(Object.assign({}, CALENDAR_FILTER_DEFAULTS, {
+                panelOpen: calendarFilterState.panelOpen
+            }));
+            saveCalendarFilterState();
+            calendarRender();
         }
 
         function calendarResolveTodoCategoryName(categoryName, categories) {
@@ -1330,6 +1596,7 @@
                         calendarTodoCategories = [{ name: 'Général', color: '#ffffff' }];
                         calendarTodoState = {};
                         calendarRenderTodoCategoryOptions();
+                        calendarRenderFilterCategoryOptions();
                         calendarRender();
                         return;
                     }
@@ -1402,6 +1669,7 @@
                     calendarTodoCategories = [{ name: 'Général', color: '#ffffff' }];
                     calendarTodoState = {};
                     calendarRenderTodoCategoryOptions();
+                    calendarRenderFilterCategoryOptions();
                 }
                 calendarRender();
             } catch (e) {
@@ -1423,6 +1691,7 @@
             calendarTodoItems = calendarTodoDeadlines;
             calendarRenderTodoCategoryOptions();
             calendarRenderTodoModalCategoryOptions();
+            calendarRenderFilterCategoryOptions();
         }
 
         function calendarExtractTodoState(docData) {
@@ -1553,6 +1822,7 @@
                 parentTitle: '',
                 category: category.name || 'Général',
                 categoryColor: calendarNormalizeColor(category.color) || calendarGetTodoCategoryColor(category.name),
+                priority: ['low', 'medium', 'high'].indexOf(task && task.priority) >= 0 ? task.priority : 'medium',
                 time: '',
                 completed: !!(task && task.completed),
                 recurrence: calendarNormalizeRecurrence(task && task.recurrence),
@@ -1779,13 +2049,75 @@
             if (input) input.value = calendarTitle || 'Calendrier';
         }
 
+        function calendarIsDateInCurrentWeek(ymd) {
+            const date = calendarDateFromYmd(ymd);
+            const today = new Date();
+            const weekStart = getWeekStart(today);
+            const weekEnd = calendarAddDays(weekStart, 6);
+            const value = calendarYmd(date);
+            return value >= calendarYmd(weekStart) && value <= calendarYmd(weekEnd);
+        }
+
+        function calendarIsDateInCurrentMonth(ymd) {
+            const date = calendarDateFromYmd(ymd);
+            const today = new Date();
+            return date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth();
+        }
+
+        function calendarTodoTypeMatchesFilter(item, typeFilter) {
+            if (typeFilter === 'all') return true;
+            if (typeFilter === 'scheduled-task') return item.kind === 'task-scheduled';
+            if (typeFilter === 'scheduled-subtask') return item.kind === 'subtask-scheduled';
+            if (typeFilter === 'recurring') return item.kind === 'task-recurring' || item.kind === 'subtask-recurring';
+            if (typeFilter === 'deadline') return item.kind === 'task-deadline';
+            return true;
+        }
+
+        function calendarItemDateMatchesFilter(item, dateFilter) {
+            if (dateFilter === 'all') return true;
+            const itemDate = calendarNormalizeDateValue(item && (item.dueDate || item.date));
+            if (!itemDate) return false;
+            const today = getTodayYmd();
+            if (dateFilter === 'today') return itemDate === today;
+            if (dateFilter === 'this_week') return calendarIsDateInCurrentWeek(itemDate);
+            if (dateFilter === 'this_month') return calendarIsDateInCurrentMonth(itemDate);
+            if (dateFilter === 'overdue') {
+                return item.source === 'todo'
+                    && item.kind === 'task-deadline'
+                    && itemDate < today
+                    && !item.completed;
+            }
+            return true;
+        }
+
+        function calendarItemMatchesFilters(item) {
+            const filters = normalizeCalendarFilterState(calendarFilterState);
+            if (!item) return false;
+            if (item.source !== 'todo') {
+                return filters.type === 'all' && calendarItemDateMatchesFilter(item, filters.date);
+            }
+
+            if (filters.status === 'completed' && !item.completed) return false;
+            if (filters.status === 'active' && item.completed) return false;
+            if (filters.category !== 'all' && item.category !== filters.category) return false;
+            if (filters.priority !== 'all' && item.priority !== filters.priority) return false;
+            if (!calendarTodoTypeMatchesFilter(item, filters.type)) return false;
+            if (!calendarItemDateMatchesFilter(item, filters.date)) return false;
+            return true;
+        }
+
+        function calendarGetOverdueTodoPeriodRange(todoItem) {
+            const dueDate = calendarNormalizeDateValue(todoItem && (todoItem.dueDate || todoItem.date));
+            if (!dueDate || todoItem.completed || calendarCompareYmd(dueDate, getTodayYmd()) >= 0) return null;
+            return { startDate: dueDate, dueDate: dueDate };
+        }
+
         function calendarCombinedItemsByDate() {
             const byDate = {};
             calendarEvents.forEach(function (event) {
                 const date = calendarNormalizeDateValue(event.date);
                 if (!date) return;
-                if (!byDate[date]) byDate[date] = [];
-                byDate[date].push({
+                const item = {
                     source: 'calendar',
                     id: event.id,
                     title: event.title || 'Evénement sans titre',
@@ -1793,7 +2125,10 @@
                     time: event.time || '',
                     notes: event.notes || '',
                     type: 'manual'
-                });
+                };
+                if (!calendarItemMatchesFilters(item)) return;
+                if (!byDate[date]) byDate[date] = [];
+                byDate[date].push(item);
             });
             calendarGetDatedTodoItems().forEach(function (item) {
                 const itemDate = calendarNormalizeDateValue(item && item.date);
@@ -1816,7 +2151,8 @@
                 .concat(calendarTodoScheduledItems)
                 .concat(calendarTodoRecurringItems)
                 .concat(calendarSubtaskScheduledItems)
-                .concat(calendarSubtaskRecurringItems);
+                .concat(calendarSubtaskRecurringItems)
+                .filter(calendarItemMatchesFilters);
         }
 
         function calendarItemSortPriority(item) {
@@ -1880,8 +2216,9 @@
         }
 
         function getTodoPeriodItems() {
+            const overdueMode = calendarFilterState.date === 'overdue';
             return calendarTodoDeadlines.map(function (item) {
-                const range = calendarGetTodoPeriodRange(item);
+                const range = overdueMode ? calendarGetOverdueTodoPeriodRange(item) : calendarGetTodoPeriodRange(item);
                 if (!range) return null;
                 const category = item.category || 'Général';
                 return Object.assign({}, item, {
@@ -1893,7 +2230,7 @@
                     category: category,
                     categoryColor: item.categoryColor || calendarGetTodoCategoryColor(category)
                 });
-            }).filter(Boolean).sort(function (a, b) {
+            }).filter(Boolean).filter(calendarItemMatchesFilters).sort(function (a, b) {
                 const startCmp = calendarCompareYmd(a.startDate, b.startDate);
                 if (startCmp !== 0) return startCmp;
                 return calendarCompareYmd(a.dueDate, b.dueDate);
@@ -3000,6 +3337,7 @@
 
                 calendarUpdateTopTabs();
                 calendarLoadData();
+                restoreCalendarFilterState();
                 calendarRenderTitle();
                 calendarRender();
 
@@ -3060,6 +3398,35 @@
                     changeView(button.getAttribute('data-mode'));
                 });
             });
+            const filterToggleBtn = document.getElementById('toggle-calendar-filters-btn');
+            if (filterToggleBtn) {
+                filterToggleBtn.addEventListener('click', function () {
+                    calendarFilterState.panelOpen = !calendarFilterState.panelOpen;
+                    applyCalendarFilterPanelState();
+                    saveCalendarFilterState();
+                });
+            }
+            document.querySelectorAll('#calendar-filter-status-group [data-calendar-status]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    calendarSetStatusFilter(button.getAttribute('data-calendar-status'));
+                    calendarFilterState = getCalendarFilterState();
+                    saveCalendarFilterState();
+                    calendarRender();
+                });
+            });
+            ['calendar-filter-category', 'calendar-filter-priority', 'calendar-filter-type', 'calendar-filter-date'].forEach(function (id) {
+                const control = document.getElementById(id);
+                if (!control) return;
+                control.addEventListener('change', function () {
+                    calendarFilterState = getCalendarFilterState();
+                    saveCalendarFilterState();
+                    calendarRender();
+                });
+            });
+            const resetFiltersBtn = document.getElementById('reset-calendar-filters-btn');
+            if (resetFiltersBtn) {
+                resetFiltersBtn.addEventListener('click', resetCalendarFilterState);
+            }
             const eventKindInput = document.getElementById('event-kind');
             if (eventKindInput) {
                 eventKindInput.addEventListener('change', function () {
@@ -3177,6 +3544,9 @@
                     calendarLoadData();
                     calendarRenderTitle();
                     calendarRender();
+                } else if (e.key === getCalendarFiltersStorageKey() && calendarCanUseLocalStorage) {
+                    restoreCalendarFilterState();
+                    calendarRender();
                 }
             });
         }
@@ -3185,6 +3555,7 @@
             calendarEnsureSharedKey();
             calendarUpdateTopTabs();
             calendarLoadData();
+            restoreCalendarFilterState();
             calendarRenderTitle();
             calendarUpdateSyncBox();
 
@@ -3193,6 +3564,7 @@
                 syncEventFormDateWithSelection();
             }
             calendarRenderTodoCategoryOptions();
+            calendarRenderFilterCategoryOptions();
             calendarUpdateFormMode();
 
             calendarBindKeyModal();
@@ -3212,6 +3584,11 @@
         if (typeof window !== 'undefined') {
             window.calendarGetState = calendarGetState;
             window.calendarSetState = calendarSetState;
+            window.getCalendarFiltersStorageKey = getCalendarFiltersStorageKey;
+            window.getCalendarFilterState = getCalendarFilterState;
+            window.saveCalendarFilterState = saveCalendarFilterState;
+            window.restoreCalendarFilterState = restoreCalendarFilterState;
+            window.applyCalendarFilterStateToControls = applyCalendarFilterStateToControls;
         }
 
         document.addEventListener('DOMContentLoaded', function () {
