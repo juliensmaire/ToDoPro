@@ -230,6 +230,12 @@
             align-items: center;
         }
 
+        .modal-subtask-row.highlighted {
+            box-shadow: 0 0 0 2px #f2c94c inset;
+            border-radius: 6px;
+            padding: 4px;
+        }
+
         .modal-subtask-row input[type="checkbox"] {
             margin: 0;
         }
@@ -255,6 +261,22 @@
 
         .modal-subtask-add input {
             margin-bottom: 0;
+        }
+
+        .modal-subtask-meta,
+        .todo-modal-readonly {
+            grid-column: 1 / -1;
+            color: #bdbdbd;
+            font-size: 0.82em;
+            line-height: 1.35;
+        }
+
+        .todo-modal-readonly {
+            border: 1px solid #333333;
+            border-radius: 6px;
+            padding: 8px;
+            background: #181818;
+            min-height: 18px;
         }
 
         .calendar-header {
@@ -296,11 +318,6 @@
             background-color: #555555;
             box-shadow: 0 0 0 1px #777777 inset;
             font-weight: 600;
-        }
-
-        #toggle-todo-periods-btn.active {
-            background-color: #45502a;
-            box-shadow: 0 0 0 1px #7a8a42 inset;
         }
 
         .calendar-period-nav {
@@ -475,20 +492,56 @@
             line-height: 1.25;
             overflow-wrap: anywhere;
             border: 1px solid transparent;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .calendar-item.manual {
+        .calendar-item.manual,
+        .calendar-item-manual {
             background: #263238;
             border-color: #3f5861;
         }
 
-        .calendar-item.todo {
+        .calendar-item.todo,
+        .calendar-item-todo-scheduled,
+        .calendar-item-subtask-scheduled,
+        .calendar-item-todo-recurring,
+        .calendar-item-subtask-recurring {
             background: #2d2417;
             border-color: #76562b;
             cursor: pointer;
         }
 
+        .calendar-item-todo-scheduled {
+            background: #202a20;
+        }
+
+        .calendar-item-subtask-scheduled {
+            background: #1c241c;
+            font-size: 0.76em;
+            opacity: 0.92;
+        }
+
+        .calendar-item-todo-recurring {
+            background: #1e2b24;
+            border-style: dashed;
+        }
+
+        .calendar-item-subtask-recurring {
+            background: #18231d;
+            border-style: dashed;
+            font-size: 0.76em;
+            opacity: 0.9;
+        }
+
         .calendar-item.todo.todo-period {
+            background: #222615;
+            border-color: #667332;
+        }
+
+        .calendar-item-todo-deadline,
+        .calendar-deadline-bar {
             background: #222615;
             border-color: #667332;
         }
@@ -504,6 +557,31 @@
             margin: 0 0 8px;
             font-size: 1em;
             color: #ffffff;
+        }
+
+        .calendar-day-agenda {
+            cursor: default;
+        }
+
+        .calendar-day-section {
+            margin-top: 12px;
+        }
+
+        .calendar-day-section h2 {
+            margin: 0 0 7px;
+            font-size: 0.95em;
+            color: #ffffff;
+        }
+
+        .calendar-day-section-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .calendar-day-empty {
+            color: #888888;
+            font-size: 0.82em;
         }
 
         .day-period-list {
@@ -752,6 +830,21 @@
                         <input id="todo-modal-due-date" name="todo-modal-due-date" type="date">
                     </div>
 
+                    <div>
+                        <label for="todo-modal-scheduled-date">Date certaine</label>
+                        <input id="todo-modal-scheduled-date" name="todo-modal-scheduled-date" type="date">
+                    </div>
+
+                    <div>
+                        <label for="todo-modal-scheduled-time">Heure certaine</label>
+                        <input id="todo-modal-scheduled-time" name="todo-modal-scheduled-time" type="time">
+                    </div>
+
+                    <div class="todo-modal-full">
+                        <label>Récurrence</label>
+                        <div id="todo-modal-recurrence-summary" class="todo-modal-readonly"></div>
+                    </div>
+
                     <div class="todo-modal-full">
                         <label>Sous-tâches</label>
                         <div id="todo-modal-subtasks" class="todo-modal-subtasks"></div>
@@ -790,7 +883,6 @@
         </div>
         <div class="calendar-toolbar-actions">
             <button id="today-btn" type="button">Aujourd'hui</button>
-            <button id="toggle-todo-periods-btn" type="button" aria-pressed="false">Afficher les périodes Todo</button>
             <button id="toggle-side-panel-btn" type="button">Masquer le panneau</button>
         </div>
     </div>
@@ -811,41 +903,31 @@
 
         <aside id="calendar-side-panel">
             <section class="side-section" aria-labelledby="add-event-title">
-                <h2 id="add-event-title">Ajouter un événement</h2>
+                <h2 id="add-event-title">Ajouter une tâche planifiée</h2>
                 <form id="event-form">
-                    <label for="event-kind">Type</label>
-                    <select id="event-kind" name="event-kind">
-                        <option value="calendar">Événement calendrier</option>
-                        <option value="todo">Tâche Todo</option>
-                    </select>
-
                     <label for="event-title">Titre</label>
                     <input id="event-title" name="event-title" type="text" required autocomplete="off">
 
-                    <label for="event-date">Date</label>
+                    <label for="event-date">Date certaine</label>
                     <input id="event-date" name="event-date" type="date" required>
 
-                    <div class="calendar-only-fields" id="calendar-only-fields">
-                        <label for="event-time">Heure optionnelle</label>
-                        <input id="event-time" name="event-time" type="time">
-                    </div>
+                    <label for="event-time">Heure optionnelle</label>
+                    <input id="event-time" name="event-time" type="time">
 
-                    <div class="todo-only-fields hidden" id="todo-only-fields">
-                        <label for="todo-category">Catégorie Todo</label>
-                        <select id="todo-category" name="todo-category"></select>
+                    <label for="todo-category">Catégorie</label>
+                    <select id="todo-category" name="todo-category"></select>
 
-                        <label for="todo-priority">Priorité Todo</label>
-                        <select id="todo-priority" name="todo-priority">
-                            <option value="low">Basse</option>
-                            <option value="medium" selected>Moyenne</option>
-                            <option value="high">Haute</option>
-                        </select>
-                    </div>
+                    <label for="todo-priority">Priorité</label>
+                    <select id="todo-priority" name="todo-priority">
+                        <option value="low">Basse</option>
+                        <option value="medium" selected>Moyenne</option>
+                        <option value="high">Haute</option>
+                    </select>
 
-                    <label for="event-notes">Notes optionnelles</label>
+                    <label for="event-notes">Description optionnelle</label>
                     <textarea id="event-notes" name="event-notes"></textarea>
 
-                    <button id="event-submit-btn" type="submit">Ajouter événement</button>
+                    <button id="event-submit-btn" type="submit">Ajouter tâche planifiée</button>
                 </form>
             </section>
 
@@ -875,10 +957,16 @@
         };
         let calendarSectionStates = {};
         let calendarTodoItems = [];
+        let calendarTodoDeadlines = [];
+        let calendarTodoScheduledItems = [];
+        let calendarTodoRecurringItems = [];
+        let calendarSubtaskScheduledItems = [];
+        let calendarSubtaskRecurringItems = [];
         let calendarTodoCategories = [{ name: 'Général', color: '#ffffff' }];
         let calendarTodoState = {};
         let calendarModalTodoTaskId = null;
         let calendarModalTodoTask = null;
+        let calendarModalFocusSubtaskIndex = null;
         let calendarCanUseLocalStorage = false;
         let calendarAutosaveTimer = null;
         let calendarDayClickTimer = null;
@@ -995,6 +1083,21 @@
             }
         }
 
+        function calendarResolveTodoCategoryName(categoryName, categories) {
+            const normalizedCategories = Array.isArray(categories) && categories.length
+                ? categories
+                : (calendarTodoCategories.length ? calendarTodoCategories : [{ name: 'Général', color: '#ffffff' }]);
+            const wanted = String(categoryName || '').trim();
+            const match = normalizedCategories.find(function (category) {
+                return category && category.name === wanted;
+            });
+            if (match) return match.name;
+            const general = normalizedCategories.find(function (category) {
+                return category && category.name === 'Général';
+            });
+            return general ? general.name : normalizedCategories[0].name || 'Général';
+        }
+
         function calendarUpdateTopTabs() {
             const key = calendarActiveKey();
             const todoLink = document.getElementById('todo-tab-link');
@@ -1077,8 +1180,9 @@
                 calendarSectionStates.sidePanelOpen = true;
             }
             if (typeof calendarSectionStates.showTodoPeriods !== 'boolean') {
-                calendarSectionStates.showTodoPeriods = false;
+                calendarSectionStates.showTodoPeriods = true;
             }
+            calendarSectionStates.showTodoPeriods = true;
         }
 
         function calendarGetStateObject() {
@@ -1218,6 +1322,11 @@
                 window._calendarTodoUnsub = calendarTodoDocRef.onSnapshot(function (snap) {
                     if (!snap.exists) {
                         calendarTodoItems = [];
+                        calendarTodoDeadlines = [];
+                        calendarTodoScheduledItems = [];
+                        calendarTodoRecurringItems = [];
+                        calendarSubtaskScheduledItems = [];
+                        calendarSubtaskRecurringItems = [];
                         calendarTodoCategories = [{ name: 'Général', color: '#ffffff' }];
                         calendarTodoState = {};
                         calendarRenderTodoCategoryOptions();
@@ -1285,6 +1394,11 @@
                     calendarApplyTodoSnapshot(snap.data());
                 } else {
                     calendarTodoItems = [];
+                    calendarTodoDeadlines = [];
+                    calendarTodoScheduledItems = [];
+                    calendarTodoRecurringItems = [];
+                    calendarSubtaskScheduledItems = [];
+                    calendarSubtaskRecurringItems = [];
                     calendarTodoCategories = [{ name: 'Général', color: '#ffffff' }];
                     calendarTodoState = {};
                     calendarRenderTodoCategoryOptions();
@@ -1300,7 +1414,13 @@
             const state = calendarExtractTodoState(docData);
             calendarTodoState = state && typeof state === 'object' ? state : {};
             calendarTodoCategories = calendarNormalizeTodoCategories(state.categories);
-            calendarTodoItems = calendarExtractTodoDueItemsFromState(state);
+            const todoData = calendarExtractTodoData(state);
+            calendarTodoDeadlines = todoData.todoDeadlines;
+            calendarTodoScheduledItems = todoData.todoScheduledItems;
+            calendarTodoRecurringItems = todoData.todoRecurringItems;
+            calendarSubtaskScheduledItems = todoData.subtaskScheduledItems;
+            calendarSubtaskRecurringItems = todoData.subtaskRecurringItems;
+            calendarTodoItems = calendarTodoDeadlines;
             calendarRenderTodoCategoryOptions();
             calendarRenderTodoModalCategoryOptions();
         }
@@ -1326,29 +1446,201 @@
             return normalized;
         }
 
+        function calendarDefaultRecurrence() {
+            return {
+                enabled: false,
+                frequency: 'none',
+                interval: 1,
+                daysOfWeek: [],
+                dayOfMonth: null,
+                mode: 'on_completion',
+                nextDate: '',
+                lastCompletedDate: ''
+            };
+        }
+
+        function calendarNormalizeRecurrence(recurrence) {
+            const raw = recurrence && typeof recurrence === 'object' ? recurrence : {};
+            const normalized = calendarDefaultRecurrence();
+            const allowed = ['none', 'daily', 'weekly', 'monthly', 'custom'];
+            const interval = parseInt(raw.interval, 10);
+            const dayOfMonth = parseInt(raw.dayOfMonth, 10);
+            normalized.frequency = allowed.indexOf(raw.frequency) >= 0 ? raw.frequency : 'none';
+            normalized.enabled = !!raw.enabled && normalized.frequency !== 'none';
+            normalized.interval = isFinite(interval) && interval >= 1 ? interval : 1;
+            normalized.daysOfWeek = Array.isArray(raw.daysOfWeek)
+                ? raw.daysOfWeek.map(function (day) { return parseInt(day, 10); }).filter(function (day) { return day >= 1 && day <= 7; })
+                : [];
+            normalized.dayOfMonth = isFinite(dayOfMonth) && dayOfMonth >= 1 && dayOfMonth <= 31 ? dayOfMonth : null;
+            normalized.mode = raw.mode === 'on_completion' ? 'on_completion' : 'on_completion';
+            normalized.nextDate = calendarNormalizeDateValue(raw.nextDate);
+            normalized.lastCompletedDate = calendarNormalizeDateValue(raw.lastCompletedDate);
+            if (!normalized.enabled) {
+                normalized.frequency = 'none';
+                normalized.nextDate = '';
+            }
+            return normalized;
+        }
+
+        function calendarFormatRecurrenceSummary(recurrence) {
+            const normalized = calendarNormalizeRecurrence(recurrence);
+            const days = ['', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];
+            if (!normalized.enabled) return 'Aucune';
+            let text = '';
+            if (normalized.frequency === 'daily') text = normalized.interval === 1 ? 'tous les jours' : `tous les ${normalized.interval} jours`;
+            if (normalized.frequency === 'weekly') text = normalized.interval === 1 ? 'toutes les semaines' : `toutes les ${normalized.interval} semaines`;
+            if (normalized.frequency === 'monthly') text = normalized.interval === 1 ? 'tous les mois' : `tous les ${normalized.interval} mois`;
+            if (normalized.frequency === 'custom') text = `personnalisée (${normalized.interval})`;
+            if (normalized.daysOfWeek.length) {
+                text += ` ${normalized.daysOfWeek.map(function (day) { return days[day]; }).join(', ')}`;
+            }
+            if (normalized.dayOfMonth) {
+                text += ` le ${normalized.dayOfMonth}`;
+            }
+            if (normalized.nextDate) {
+                text += ` - prochaine ${calendarYmdToDisplayDate(normalized.nextDate)}`;
+            }
+            return text || 'récurrence active';
+        }
+
+        function calendarExtractTodoData(docData) {
+            const state = calendarExtractTodoState(docData);
+            const tasks = state && Array.isArray(state.tasks) ? state.tasks : [];
+            const result = {
+                todoDeadlines: [],
+                todoScheduledItems: [],
+                todoRecurringItems: [],
+                subtaskScheduledItems: [],
+                subtaskRecurringItems: []
+            };
+
+            tasks.forEach(function (task) {
+                if (!task) return;
+                const categoryName = task.category || 'Général';
+                const category = {
+                    name: categoryName,
+                    color: calendarGetTodoCategoryColor(categoryName)
+                };
+                const deadline = extractTaskDeadlineItem(task, category);
+                const recurring = extractTaskRecurringItem(task, category);
+                const scheduled = extractTaskScheduledItem(task, category);
+
+                if (deadline) result.todoDeadlines.push(deadline);
+                if (scheduled && (!recurring || scheduled.date !== recurring.date)) result.todoScheduledItems.push(scheduled);
+                if (recurring) result.todoRecurringItems.push(recurring);
+
+                extractSubtaskScheduledItems(task, category).forEach(function (item) {
+                    const recurrenceDate = calendarSubtaskRecurrenceDate(task, item.subtaskIndex);
+                    if (!recurrenceDate || recurrenceDate !== item.date) result.subtaskScheduledItems.push(item);
+                });
+                extractSubtaskRecurringItems(task, category).forEach(function (item) {
+                    result.subtaskRecurringItems.push(item);
+                });
+            });
+
+            return result;
+        }
+
+        function calendarBaseTodoItem(task, category, kind) {
+            const taskId = task && task.id !== undefined && task.id !== null ? task.id : `${kind}:${task && task.title || ''}`;
+            return {
+                source: 'todo',
+                kind,
+                id: taskId,
+                taskId,
+                subtaskIndex: null,
+                title: task && task.title ? task.title : 'Tâche sans titre',
+                parentTitle: '',
+                category: category.name || 'Général',
+                categoryColor: calendarNormalizeColor(category.color) || calendarGetTodoCategoryColor(category.name),
+                time: '',
+                completed: !!(task && task.completed),
+                recurrence: calendarNormalizeRecurrence(task && task.recurrence),
+                dueDate: ''
+            };
+        }
+
+        function extractTaskScheduledItem(task, category) {
+            const date = calendarNormalizeDateValue(task && task.scheduledDate);
+            if (!date) return null;
+            return Object.assign(calendarBaseTodoItem(task, category, 'task-scheduled'), {
+                date,
+                time: calendarNormalizeTimeValue(task && task.scheduledTime)
+            });
+        }
+
+        function extractSubtaskScheduledItems(task, category) {
+            const subtasks = Array.isArray(task && task.subtasks) ? task.subtasks : [];
+            return subtasks.map(function (subtask, index) {
+                const date = calendarNormalizeDateValue(subtask && subtask.scheduledDate);
+                if (!date) return null;
+                return Object.assign(calendarBaseTodoItem(task, category, 'subtask-scheduled'), {
+                    id: `${task.id}:subtask:${index}:scheduled`,
+                    subtaskIndex: index,
+                    title: subtask.title || 'Sous-tâche sans titre',
+                    parentTitle: task.title || 'Tâche sans titre',
+                    date,
+                    time: calendarNormalizeTimeValue(subtask && subtask.scheduledTime),
+                    completed: !!subtask.completed,
+                    recurrence: calendarNormalizeRecurrence(subtask && subtask.recurrence)
+                });
+            }).filter(Boolean);
+        }
+
+        function extractTaskRecurringItem(task, category) {
+            const recurrence = calendarNormalizeRecurrence(task && task.recurrence);
+            const date = recurrence.enabled ? (recurrence.nextDate || calendarNormalizeDateValue(task && task.scheduledDate)) : '';
+            if (!date) return null;
+            return Object.assign(calendarBaseTodoItem(task, category, 'task-recurring'), {
+                date,
+                time: calendarNormalizeTimeValue(task && task.scheduledTime),
+                recurrence
+            });
+        }
+
+        function extractSubtaskRecurringItems(task, category) {
+            const subtasks = Array.isArray(task && task.subtasks) ? task.subtasks : [];
+            return subtasks.map(function (subtask, index) {
+                const recurrence = calendarNormalizeRecurrence(subtask && subtask.recurrence);
+                const date = recurrence.enabled ? (recurrence.nextDate || calendarNormalizeDateValue(subtask && subtask.scheduledDate)) : '';
+                if (!date) return null;
+                return Object.assign(calendarBaseTodoItem(task, category, 'subtask-recurring'), {
+                    id: `${task.id}:subtask:${index}:recurring`,
+                    subtaskIndex: index,
+                    title: subtask.title || 'Sous-tâche sans titre',
+                    parentTitle: task.title || 'Tâche sans titre',
+                    date,
+                    time: calendarNormalizeTimeValue(subtask && subtask.scheduledTime),
+                    completed: !!subtask.completed,
+                    recurrence
+                });
+            }).filter(Boolean);
+        }
+
+        function calendarSubtaskRecurrenceDate(task, index) {
+            const subtasks = Array.isArray(task && task.subtasks) ? task.subtasks : [];
+            const subtask = subtasks[index];
+            const recurrence = calendarNormalizeRecurrence(subtask && subtask.recurrence);
+            return recurrence.enabled ? (recurrence.nextDate || calendarNormalizeDateValue(subtask && subtask.scheduledDate)) : '';
+        }
+
+        function extractTaskDeadlineItem(task, category) {
+            const date = calendarNormalizeDateValue(task && task.dueDate);
+            if (!date) return null;
+            return Object.assign(calendarBaseTodoItem(task, category, 'task-deadline'), {
+                date,
+                dueDate: date,
+                startDate: calendarNormalizeDateValue(task && task.startDate),
+                isDeadline: true
+            });
+        }
+
         function calendarExtractTodoDueItems(docData) {
-            return calendarExtractTodoDueItemsFromState(calendarExtractTodoState(docData));
+            return calendarExtractTodoData(docData).todoDeadlines;
         }
 
         function calendarExtractTodoDueItemsFromState(state) {
-            const tasks = state && Array.isArray(state.tasks) ? state.tasks : [];
-            return tasks.map(function (task) {
-                const date = calendarNormalizeDateValue(task && task.dueDate);
-                if (!date) return null;
-                const categoryName = task.category || 'Général';
-                const startDate = calendarNormalizeDateValue(task && task.startDate);
-                return {
-                    source: 'todo',
-                    id: task.id || `${date}:${task.title || ''}`,
-                    title: task.title || 'Tâche sans titre',
-                    date,
-                    dueDate: date,
-                    startDate,
-                    category: categoryName,
-                    categoryColor: calendarGetTodoCategoryColor(categoryName),
-                    completed: !!task.completed
-                };
-            }).filter(Boolean);
+            return calendarExtractTodoData(state).todoDeadlines;
         }
 
         function calendarYmd(date) {
@@ -1442,6 +1734,11 @@
             return '';
         }
 
+        function calendarNormalizeTimeValue(value) {
+            const text = String(value || '').trim();
+            return /^([01]\d|2[0-3]):[0-5]\d$/.test(text) ? text : '';
+        }
+
         function calendarFormatMonth(year, month) {
             try {
                 return new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(year, month, 1));
@@ -1498,23 +1795,37 @@
                     type: 'manual'
                 });
             });
-            calendarTodoItems.forEach(function (item) {
-                const dueDate = calendarNormalizeDateValue(item && item.date);
-                if (!dueDate) return;
-
-                if (calendarSectionStates.showTodoPeriods && calendarGetTodoPeriodRange(item)) {
-                    return;
-                }
-
-                calendarAddItemToDateMap(byDate, dueDate, item);
+            calendarGetDatedTodoItems().forEach(function (item) {
+                const itemDate = calendarNormalizeDateValue(item && item.date);
+                if (!itemDate) return;
+                calendarAddItemToDateMap(byDate, itemDate, item);
             });
             Object.keys(byDate).forEach(function (date) {
                 byDate[date].sort(function (a, b) {
                     if (a.source !== b.source) return a.source === 'calendar' ? -1 : 1;
+                    const priority = calendarItemSortPriority(a) - calendarItemSortPriority(b);
+                    if (priority !== 0) return priority;
                     return String(a.time || '').localeCompare(String(b.time || ''));
                 });
             });
             return byDate;
+        }
+
+        function calendarGetDatedTodoItems() {
+            return []
+                .concat(calendarTodoScheduledItems)
+                .concat(calendarTodoRecurringItems)
+                .concat(calendarSubtaskScheduledItems)
+                .concat(calendarSubtaskRecurringItems);
+        }
+
+        function calendarItemSortPriority(item) {
+            if (!item || item.source === 'calendar') return 0;
+            if (item.kind === 'task-scheduled') return 1;
+            if (item.kind === 'task-recurring') return 2;
+            if (item.kind === 'subtask-scheduled') return 3;
+            if (item.kind === 'subtask-recurring') return 4;
+            return 5;
         }
 
         function calendarAddItemToDateMap(byDate, date, item) {
@@ -1569,14 +1880,13 @@
         }
 
         function getTodoPeriodItems() {
-            if (calendarSectionStates.showTodoPeriods !== true) return [];
-
-            return calendarTodoItems.map(function (item) {
+            return calendarTodoDeadlines.map(function (item) {
                 const range = calendarGetTodoPeriodRange(item);
                 if (!range) return null;
                 const category = item.category || 'Général';
                 return Object.assign({}, item, {
                     source: 'todo',
+                    kind: 'task-deadline',
                     startDate: range.startDate,
                     dueDate: range.dueDate,
                     date: range.dueDate,
@@ -1681,13 +1991,11 @@
                 });
                 weekRow.appendChild(daysRow);
 
-                if (calendarSectionStates.showTodoPeriods) {
-                    weekRow.appendChild(renderTodoPeriodBarsForMonth(
-                        calendarYmd(weekDays[0].dateObj),
-                        calendarYmd(weekDays[6].dateObj),
-                        periodItems
-                    ));
-                }
+                weekRow.appendChild(renderTodoPeriodBarsForMonth(
+                    calendarYmd(weekDays[0].dateObj),
+                    calendarYmd(weekDays[6].dateObj),
+                    periodItems
+                ));
 
                 grid.appendChild(weekRow);
             });
@@ -1715,13 +2023,11 @@
             }
             weekRow.appendChild(daysRow);
 
-            if (calendarSectionStates.showTodoPeriods) {
-                weekRow.appendChild(renderTodoPeriodBarsForWeek(
-                    calendarYmd(weekStart),
-                    calendarYmd(weekEnd),
-                    getTodoPeriodItems()
-                ));
-            }
+            weekRow.appendChild(renderTodoPeriodBarsForWeek(
+                calendarYmd(weekStart),
+                calendarYmd(weekEnd),
+                getTodoPeriodItems()
+            ));
 
             grid.appendChild(weekRow);
         }
@@ -1732,17 +2038,79 @@
             label.textContent = calendarFormatLongDate(selected);
             calendarSetWeekdaysVisible(false);
             grid.classList.add('day-view');
-            grid.appendChild(calendarCreateDayCell(selected, byDate, {
-                label: calendarFormatLongDate(selected),
-                extraClass: 'single-day'
-            }));
+            grid.appendChild(calendarCreateDayAgenda(selected, byDate));
 
-            if (calendarSectionStates.showTodoPeriods) {
-                const periodSection = renderTodoPeriodsForDay(selectedYmd);
-                if (periodSection) {
-                    grid.appendChild(periodSection);
-                }
+            const periodSection = renderTodoPeriodsForDay(selectedYmd);
+            if (periodSection) {
+                grid.appendChild(periodSection);
             }
+        }
+
+        function calendarCreateDayAgenda(dateObj, byDate) {
+            const selectedYmd = calendarYmd(dateObj);
+            const dayItems = (byDate[selectedYmd] || []).slice().sort(function (a, b) {
+                return String(a.time || '').localeCompare(String(b.time || ''))
+                    || calendarItemSortPriority(a) - calendarItemSortPriority(b)
+                    || String(a.title || '').localeCompare(String(b.title || ''));
+            });
+
+            const agenda = document.createElement('div');
+            agenda.className = 'calendar-day single-day calendar-day-agenda';
+            if (selectedYmd === calendarYmd(new Date())) agenda.classList.add('today');
+            agenda.classList.add('selected');
+            agenda.classList.add('selected-day');
+
+            const number = document.createElement('div');
+            number.className = 'calendar-day-number';
+            number.textContent = calendarFormatLongDate(dateObj);
+            agenda.appendChild(number);
+
+            [
+                {
+                    title: 'Événements calendrier',
+                    items: dayItems.filter(function (item) { return item.source === 'calendar'; })
+                },
+                {
+                    title: 'Todo planifiées',
+                    items: dayItems.filter(function (item) { return item.kind === 'task-scheduled'; })
+                },
+                {
+                    title: 'Sous-tâches planifiées',
+                    items: dayItems.filter(function (item) { return item.kind === 'subtask-scheduled'; })
+                },
+                {
+                    title: 'Récurrences',
+                    items: dayItems.filter(function (item) { return item.kind === 'task-recurring' || item.kind === 'subtask-recurring'; })
+                }
+            ].forEach(function (group) {
+                agenda.appendChild(calendarCreateDayAgendaSection(group.title, group.items));
+            });
+
+            return agenda;
+        }
+
+        function calendarCreateDayAgendaSection(titleText, items) {
+            const section = document.createElement('section');
+            section.className = 'calendar-day-section';
+
+            const title = document.createElement('h2');
+            title.textContent = titleText;
+            section.appendChild(title);
+
+            const list = document.createElement('div');
+            list.className = 'calendar-day-section-list';
+            if (items.length) {
+                items.forEach(function (item) {
+                    list.appendChild(calendarCreateItemElement(item));
+                });
+            } else {
+                const empty = document.createElement('div');
+                empty.className = 'calendar-day-empty';
+                empty.textContent = 'Aucun élément';
+                list.appendChild(empty);
+            }
+            section.appendChild(list);
+            return section;
         }
 
         function renderTodoPeriodBarsForMonth(rangeStartYmd, rangeEndYmd, periodItems) {
@@ -1774,6 +2142,7 @@
             const span = Math.max(1, calendarDaysBetween(segmentStartYmd, segmentEndYmd) + 1);
 
             bar.className = 'todo-period-bar';
+            bar.classList.add('calendar-deadline-bar');
             if (period.completed) bar.classList.add('completed');
             bar.style.gridColumn = `${startOffset + 1} / span ${span}`;
             bar.style.backgroundColor = calendarHexToRgba(color, 0.28);
@@ -1781,7 +2150,7 @@
             bar.style.borderLeftColor = color;
             bar.textContent = period.title || 'Tâche Todo';
             bar.title = calendarTodoPeriodTooltip(period);
-            calendarMakeTodoElementInteractive(bar, period.id);
+            calendarMakeTodoElementInteractive(bar, period.taskId || period.id);
             return bar;
         }
 
@@ -1795,7 +2164,7 @@
             section.className = 'day-period-section';
 
             const title = document.createElement('h2');
-            title.textContent = 'Périodes Todo actives ce jour';
+            title.textContent = 'Échéances Todo';
             section.appendChild(title);
 
             const list = document.createElement('div');
@@ -1807,7 +2176,7 @@
                 if (period.completed) item.classList.add('completed');
                 item.style.borderLeftColor = color;
                 item.title = calendarTodoPeriodTooltip(period);
-                calendarMakeTodoElementInteractive(item, period.id);
+                calendarMakeTodoElementInteractive(item, period.taskId || period.id);
 
                 const source = document.createElement('span');
                 source.className = 'calendar-item-source';
@@ -1900,14 +2269,6 @@
                 button.classList.toggle('active', active);
                 button.setAttribute('aria-pressed', active ? 'true' : 'false');
             });
-            const periodsBtn = document.getElementById('toggle-todo-periods-btn');
-            if (periodsBtn) {
-                const enabled = calendarSectionStates.showTodoPeriods === true;
-                periodsBtn.classList.toggle('active', enabled);
-                periodsBtn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-                periodsBtn.textContent = enabled ? 'Masquer les périodes Todo' : 'Afficher les périodes Todo';
-            }
-
             const prevBtn = document.getElementById('prev-period-btn');
             const nextBtn = document.getElementById('next-period-btn');
             if (calendarView.mode === 'day') {
@@ -1937,21 +2298,22 @@
             if (toggleBtn) toggleBtn.textContent = open ? 'Masquer le panneau' : 'Afficher le panneau';
         }
 
-        function calendarMakeTodoElementInteractive(el, taskId) {
+        function calendarMakeTodoElementInteractive(el, taskId, options) {
             if (!el || taskId === undefined || taskId === null) return;
+            options = options || {};
             el.setAttribute('role', 'button');
             el.setAttribute('tabindex', '0');
             el.setAttribute('aria-label', 'Ouvrir la tâche Todo');
             el.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                openTodoTaskModal(taskId);
+                openTodoTaskModal(taskId, options);
             });
             el.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     e.stopPropagation();
-                    openTodoTaskModal(taskId);
+                    openTodoTaskModal(taskId, options);
                 }
             });
         }
@@ -1977,7 +2339,10 @@
             return subtasks.filter(Boolean).map(function (subtask) {
                 return Object.assign({}, calendarClonePlain(subtask), {
                     title: String(subtask.title || '').trim() || 'Sous-tâche sans titre',
-                    completed: !!subtask.completed
+                    completed: !!subtask.completed,
+                    scheduledDate: calendarNormalizeDateValue(subtask.scheduledDate),
+                    scheduledTime: calendarNormalizeTimeValue(subtask.scheduledTime),
+                    recurrence: calendarNormalizeRecurrence(subtask.recurrence)
                 });
             });
         }
@@ -1994,6 +2359,9 @@
             normalized.subtasks = calendarNormalizeSubtasksForModal(task.subtasks);
             normalized.dueDate = task.dueDate || '';
             normalized.dueDateDisplay = task.dueDateDisplay || '';
+            normalized.scheduledDate = calendarNormalizeDateValue(task.scheduledDate);
+            normalized.scheduledTime = calendarNormalizeTimeValue(task.scheduledTime);
+            normalized.recurrence = calendarNormalizeRecurrence(task.recurrence);
             if (typeof normalized.expanded !== 'boolean') normalized.expanded = false;
             return normalized;
         }
@@ -2005,8 +2373,10 @@
             }) || null;
         }
 
-        async function openTodoTaskModal(taskId) {
+        async function openTodoTaskModal(taskId, options) {
+            options = options || {};
             calendarModalTodoTaskId = String(taskId);
+            calendarModalFocusSubtaskIndex = typeof options.subtaskIndex === 'number' ? options.subtaskIndex : null;
             const modal = document.getElementById('todo-task-modal');
             const form = document.getElementById('todo-task-modal-form');
             if (!modal || !form) return;
@@ -2044,6 +2414,7 @@
             if (modal) modal.style.display = 'none';
             calendarModalTodoTaskId = null;
             calendarModalTodoTask = null;
+            calendarModalFocusSubtaskIndex = null;
             calendarSetTodoModalStatus('', '');
         }
 
@@ -2057,6 +2428,9 @@
             const descriptionInput = document.getElementById('todo-modal-description');
             const priorityInput = document.getElementById('todo-modal-priority');
             const dueDateInput = document.getElementById('todo-modal-due-date');
+            const scheduledDateInput = document.getElementById('todo-modal-scheduled-date');
+            const scheduledTimeInput = document.getElementById('todo-modal-scheduled-time');
+            const recurrenceSummary = document.getElementById('todo-modal-recurrence-summary');
 
             if (form) form.style.display = 'block';
             if (titleInput) titleInput.value = calendarModalTodoTask.title;
@@ -2064,6 +2438,9 @@
             if (descriptionInput) descriptionInput.value = calendarModalTodoTask.description || '';
             if (priorityInput) priorityInput.value = calendarModalTodoTask.priority || 'medium';
             if (dueDateInput) dueDateInput.value = calendarNormalizeDateValue(calendarModalTodoTask.dueDate) || '';
+            if (scheduledDateInput) scheduledDateInput.value = calendarModalTodoTask.scheduledDate || '';
+            if (scheduledTimeInput) scheduledTimeInput.value = calendarModalTodoTask.scheduledTime || '';
+            if (recurrenceSummary) recurrenceSummary.textContent = calendarFormatRecurrenceSummary(calendarModalTodoTask.recurrence);
 
             calendarRenderTodoModalCategoryOptions();
             renderModalSubtasks();
@@ -2103,6 +2480,9 @@
             calendarModalTodoTask.subtasks.forEach(function (subtask, index) {
                 const row = document.createElement('div');
                 row.className = 'modal-subtask-row';
+                if (calendarModalFocusSubtaskIndex === index) {
+                    row.classList.add('highlighted');
+                }
 
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
@@ -2131,8 +2511,26 @@
                 row.appendChild(checkbox);
                 row.appendChild(titleInput);
                 row.appendChild(removeBtn);
+
+                const meta = document.createElement('div');
+                meta.className = 'modal-subtask-meta';
+                const bits = [];
+                const scheduledText = formatScheduledDateTime(subtask.scheduledDate, subtask.scheduledTime);
+                if (scheduledText) bits.push(`Planifiée : ${scheduledText}`);
+                if (subtask.recurrence && subtask.recurrence.enabled) bits.push(`Récurrence : ${calendarFormatRecurrenceSummary(subtask.recurrence)}`);
+                meta.textContent = bits.join(' | ');
+                if (bits.length) row.appendChild(meta);
                 container.appendChild(row);
             });
+
+            if (calendarModalFocusSubtaskIndex !== null) {
+                setTimeout(function () {
+                    const highlighted = container.querySelector('.modal-subtask-row.highlighted');
+                    if (highlighted && highlighted.scrollIntoView) {
+                        highlighted.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    }
+                }, 0);
+            }
         }
 
         function addModalSubtask() {
@@ -2143,7 +2541,10 @@
 
             calendarModalTodoTask.subtasks.push({
                 title: title,
-                completed: false
+                completed: false,
+                scheduledDate: '',
+                scheduledTime: '',
+                recurrence: calendarDefaultRecurrence()
             });
             if (input) input.value = '';
             renderModalSubtasks();
@@ -2177,15 +2578,21 @@
             const categoryInput = document.getElementById('todo-modal-category');
             const priorityInput = document.getElementById('todo-modal-priority');
             const dueDateInput = document.getElementById('todo-modal-due-date');
+            const scheduledDateInput = document.getElementById('todo-modal-scheduled-date');
+            const scheduledTimeInput = document.getElementById('todo-modal-scheduled-time');
             const updated = calendarClonePlain(calendarModalTodoTask);
             const wasCompleted = !!calendarModalTodoTask.completed;
             const isCompleted = completedInput ? !!completedInput.checked : !!updated.completed;
             const dueDateYmd = calendarNormalizeDateValue(dueDateInput ? dueDateInput.value : '');
+            const scheduledDateYmd = calendarNormalizeDateValue(scheduledDateInput ? scheduledDateInput.value : '');
 
             updated.title = titleInput && titleInput.value.trim() ? titleInput.value.trim() : updated.title;
             updated.description = descriptionInput ? descriptionInput.value : '';
             updated.category = categoryInput ? categoryInput.value : updated.category || 'Général';
             updated.priority = priorityInput ? priorityInput.value : updated.priority || 'medium';
+            updated.scheduledDate = scheduledDateYmd;
+            updated.scheduledTime = scheduledDateYmd ? calendarNormalizeTimeValue(scheduledTimeInput ? scheduledTimeInput.value : '') : '';
+            updated.recurrence = calendarNormalizeRecurrence(updated.recurrence);
             updated.completed = isCompleted;
             updated.completionDate = isCompleted
                 ? (wasCompleted && updated.completionDate ? updated.completionDate : new Date().toISOString())
@@ -2290,28 +2697,27 @@
 
         function calendarCreateItemElement(item) {
             const el = document.createElement('div');
-            el.className = item.source === 'todo' ? 'calendar-item todo' : 'calendar-item manual';
+            el.className = item.source === 'todo'
+                ? `calendar-item todo ${calendarCssClassForTodoKind(item.kind)}`
+                : 'calendar-item manual calendar-item-manual';
             if (item.isPeriod) el.classList.add('todo-period');
             if (item.completed) el.classList.add('completed');
             if (item.source === 'todo' && item.categoryColor) {
                 el.style.borderLeftColor = item.categoryColor;
                 el.style.borderLeftWidth = '4px';
+                el.style.borderColor = calendarHexToRgba(item.categoryColor, 0.55);
+                el.style.backgroundColor = calendarHexToRgba(item.categoryColor, item.kind && item.kind.indexOf('subtask') === 0 ? 0.14 : 0.2);
             }
             if (item.source === 'todo') {
-                calendarMakeTodoElementInteractive(el, item.id);
+                el.title = calendarTodoItemTooltip(item);
+                calendarMakeTodoElementInteractive(el, item.taskId || item.id, { subtaskIndex: item.subtaskIndex });
             }
 
-            const source = document.createElement('span');
-            source.className = 'calendar-item-source';
-            source.textContent = item.source === 'todo' ? '[Todo]' : '[Calendrier]';
-            el.appendChild(source);
-
-            if (item.source === 'todo' && item.category) {
-                const category = document.createElement('span');
-                category.className = 'todo-category-badge';
-                category.textContent = item.category;
-                category.style.backgroundColor = item.categoryColor || calendarGetTodoCategoryColor(item.category);
-                el.appendChild(category);
+            if (item.source === 'calendar') {
+                const source = document.createElement('span');
+                source.className = 'calendar-item-source';
+                source.textContent = '[Calendrier]';
+                el.appendChild(source);
             }
 
             if (item.time) {
@@ -2322,7 +2728,7 @@
             }
 
             const title = document.createElement('span');
-            const displayTitle = item.isPeriod ? `Période: ${item.title}` : item.title;
+            const displayTitle = calendarDisplayTitleForItem(item);
             title.textContent = item.completed ? `Terminé: ${displayTitle}` : displayTitle;
             el.appendChild(title);
 
@@ -2346,6 +2752,40 @@
             }
 
             return el;
+        }
+
+        function calendarCssClassForTodoKind(kind) {
+            if (kind === 'task-scheduled') return 'calendar-item-todo-scheduled';
+            if (kind === 'subtask-scheduled') return 'calendar-item-subtask-scheduled';
+            if (kind === 'task-recurring') return 'calendar-item-todo-recurring';
+            if (kind === 'subtask-recurring') return 'calendar-item-subtask-recurring';
+            if (kind === 'task-deadline') return 'calendar-item-todo-deadline';
+            return 'calendar-item-todo-scheduled';
+        }
+
+        function calendarDisplayTitleForItem(item) {
+            if (!item) return '';
+            if (item.kind === 'subtask-scheduled') return `↳ ${item.title || 'Sous-tâche'}`;
+            if (item.kind === 'task-recurring') return `🔁 ${item.title || 'Tâche'}`;
+            if (item.kind === 'subtask-recurring') return `↳ 🔁 ${item.title || 'Sous-tâche'}`;
+            if (item.kind === 'task-deadline') return `Échéance: ${item.title || 'Tâche'}`;
+            return item.title || 'Tâche';
+        }
+
+        function calendarTodoItemTooltip(item) {
+            const lines = [];
+            if (!item) return '';
+            if (item.kind && item.kind.indexOf('subtask') === 0) {
+                lines.push(`Sous-tâche : ${item.title || 'Sans titre'}`);
+                lines.push(`Tâche : ${item.parentTitle || ''}`);
+            } else {
+                lines.push(`Tâche : ${item.title || 'Sans titre'}`);
+            }
+            if (item.category) lines.push(`Catégorie : ${item.category}`);
+            if (item.date) lines.push(`Date : ${calendarYmdToDisplayDate(item.date)}${item.time ? ' ' + item.time : ''}`);
+            if (item.dueDate) lines.push(`Échéance : ${calendarYmdToDisplayDate(item.dueDate)}`);
+            if (item.recurrence && item.recurrence.enabled) lines.push(`Récurrence : ${calendarFormatRecurrenceSummary(item.recurrence)}`);
+            return lines.join('\n');
         }
 
         function calendarAddEvent(event) {
@@ -2413,21 +2853,18 @@
         }
 
         function calendarToggleTodoPeriods() {
-            calendarSectionStates.showTodoPeriods = calendarSectionStates.showTodoPeriods !== true;
-            calendarSaveData();
+            calendarSectionStates.showTodoPeriods = true;
             calendarRender();
         }
 
         function calendarUpdateFormMode() {
-            const kind = document.getElementById('event-kind');
             const calendarFields = document.getElementById('calendar-only-fields');
             const todoFields = document.getElementById('todo-only-fields');
             const submitBtn = document.getElementById('event-submit-btn');
-            const isTodo = kind && kind.value === 'todo';
-            if (calendarFields) calendarFields.classList.toggle('hidden', isTodo);
-            if (todoFields) todoFields.classList.toggle('hidden', !isTodo);
-            if (submitBtn) submitBtn.textContent = isTodo ? 'Créer tâche Todo' : 'Ajouter événement';
-            if (isTodo) calendarRenderTodoCategoryOptions();
+            if (calendarFields) calendarFields.classList.remove('hidden');
+            if (todoFields) todoFields.classList.remove('hidden');
+            if (submitBtn) submitBtn.textContent = 'Ajouter tâche planifiée';
+            calendarRenderTodoCategoryOptions();
         }
 
         function syncEventFormDateWithSelection() {
@@ -2448,59 +2885,62 @@
             return `${parts[2]}/${parts[1]}/${parts[0]}`;
         }
 
-        async function calendarCreateTodoTaskFromForm(payload) {
+        function formatScheduledDateTime(date, time) {
+            const dateText = calendarYmdToDisplayDate(calendarNormalizeDateValue(date));
+            return dateText ? `${dateText}${time ? ' ' + time : ''}` : '';
+        }
+
+        async function addScheduledTaskFromCalendar(formData) {
             if (!calendarActiveKey()) {
-                alert('Impossible de créer une tâche Todo : clé projet absente.');
-                calendarSetCloudStatus('clé requise pour créer une tâche Todo', 'err', { persist: true });
+                alert('Impossible de créer une tâche planifiée : clé projet absente.');
+                calendarSetCloudStatus('clé requise pour créer une tâche planifiée', 'err', { persist: true });
                 return false;
             }
             if (typeof firebase === 'undefined') {
-                alert('Impossible de créer une tâche Todo : Firestore indisponible.');
-                calendarSetCloudStatus('Firestore indisponible pour créer une tâche Todo', 'err', { persist: true });
+                alert('Impossible de créer une tâche planifiée : Firestore indisponible.');
+                calendarSetCloudStatus('Firestore indisponible pour créer une tâche planifiée', 'err', { persist: true });
                 return false;
             }
             if (!calendarTodoDocRef && !calendarInitFirebase()) {
-                alert('Impossible de créer une tâche Todo : Firestore non initialisé.');
+                alert('Impossible de créer une tâche planifiée : Firestore non initialisé.');
                 return false;
             }
 
             try {
                 const snap = await calendarTodoDocRef.get();
-                if (!snap.exists) {
-                    alert("Impossible de créer une tâche Todo : le document Todo n'existe pas encore.");
-                    calendarSetCloudStatus('document Todo introuvable', 'err', { persist: true });
-                    return false;
-                }
-
-                const docData = snap.data() || {};
+                const docData = snap.exists ? (snap.data() || {}) : {};
                 const state = calendarExtractTodoState(docData);
                 if (!state || typeof state !== 'object') {
-                    alert('Impossible de créer une tâche Todo : état Todo invalide.');
+                    alert('Impossible de créer une tâche planifiée : état Todo invalide.');
                     calendarSetCloudStatus('état Todo invalide', 'err', { persist: true });
                     return false;
                 }
 
                 const tasks = Array.isArray(state.tasks) ? state.tasks.slice() : [];
-                const category = payload.category || 'Général';
-                const dueDateYmd = calendarNormalizeDateValue(payload.date) || getSelectedDate();
+                const todoCategories = calendarNormalizeTodoCategories(state.categories || calendarTodoCategories);
+                const category = calendarResolveTodoCategoryName(formData.category, todoCategories);
+                const scheduledDate = calendarNormalizeDateValue(formData.scheduledDate || formData.date) || getSelectedDate();
                 const newTask = {
                     id: Date.now(),
-                    title: payload.title,
-                    priority: payload.priority || 'medium',
+                    title: String(formData.title || '').trim(),
+                    priority: ['low', 'medium', 'high'].indexOf(formData.priority) >= 0 ? formData.priority : 'medium',
                     category: category,
                     completed: false,
                     completionDate: null,
-                    description: payload.notes || '',
+                    description: formData.description || formData.notes || '',
                     subtasks: [],
-                    dueDate: calendarYmdToTodoIso(dueDateYmd),
-                    dueDateDisplay: calendarYmdToDisplayDate(dueDateYmd),
+                    dueDate: '',
+                    dueDateDisplay: '',
+                    scheduledDate: scheduledDate,
+                    scheduledTime: calendarNormalizeTimeValue(formData.scheduledTime || formData.time),
+                    recurrence: calendarDefaultRecurrence(),
                     expanded: false
                 };
 
                 tasks.push(newTask);
                 const nextState = Object.assign({}, state, { tasks: tasks });
                 if (!Array.isArray(nextState.categories)) {
-                    nextState.categories = calendarTodoCategories.length ? calendarTodoCategories.slice() : [{ name: 'Général', color: '#ffffff' }];
+                    nextState.categories = todoCategories.length ? todoCategories.slice() : [{ name: 'Général', color: '#ffffff' }];
                 }
 
                 await calendarTodoDocRef.set({
@@ -2508,12 +2948,13 @@
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
 
-                calendarSetCloudStatus('tâche Todo créée', 'ok');
+                syncCalendarAfterTodoUpdate(nextState);
+                calendarSetCloudStatus('tâche planifiée créée', 'ok');
                 return true;
             } catch (e) {
-                console.warn('Création tâche Todo échouée :', e);
-                calendarSetCloudStatus('création Todo échouée (' + (e.code || e.message || 'inconnu') + ')', 'err', { persist: true });
-                alert('Impossible de créer la tâche Todo dans Firestore.');
+                console.warn('Création tâche planifiée échouée :', e);
+                calendarSetCloudStatus('création tâche planifiée échouée (' + (e.code || e.message || 'inconnu') + ')', 'err', { persist: true });
+                alert('Impossible de créer la tâche planifiée dans Firestore.');
                 return false;
             }
         }
@@ -2608,17 +3049,23 @@
             document.getElementById('toggle-side-panel-btn').addEventListener('click', function () {
                 calendarToggleSidePanel();
             });
-            document.getElementById('toggle-todo-periods-btn').addEventListener('click', function () {
-                calendarToggleTodoPeriods();
-            });
+            const todoPeriodsBtn = document.getElementById('toggle-todo-periods-btn');
+            if (todoPeriodsBtn) {
+                todoPeriodsBtn.addEventListener('click', function () {
+                    calendarToggleTodoPeriods();
+                });
+            }
             document.querySelectorAll('.view-mode-btn').forEach(function (button) {
                 button.addEventListener('click', function () {
                     changeView(button.getAttribute('data-mode'));
                 });
             });
-            document.getElementById('event-kind').addEventListener('change', function () {
-                calendarUpdateFormMode();
-            });
+            const eventKindInput = document.getElementById('event-kind');
+            if (eventKindInput) {
+                eventKindInput.addEventListener('change', function () {
+                    calendarUpdateFormMode();
+                });
+            }
             document.getElementById('todo-task-modal-form').addEventListener('submit', function (e) {
                 e.preventDefault();
                 saveTodoTaskFromModal();
@@ -2652,7 +3099,6 @@
 
             document.getElementById('event-form').addEventListener('submit', async function (e) {
                 e.preventDefault();
-                const kindInput = document.getElementById('event-kind');
                 const titleInput = document.getElementById('event-title');
                 const dateInput = document.getElementById('event-date');
                 const timeInput = document.getElementById('event-time');
@@ -2663,27 +3109,19 @@
                 const date = calendarNormalizeDateValue(dateInput.value);
                 if (!title || !date) return;
 
-                if (kindInput && kindInput.value === 'todo') {
-                    const ok = await calendarCreateTodoTaskFromForm({
-                        title,
-                        date,
-                        category: categoryInput ? categoryInput.value : 'Général',
-                        priority: priorityInput ? priorityInput.value : 'medium',
-                        notes: notesInput.value || ''
-                    });
-                    if (!ok) return;
-                } else {
-                    calendarAddEvent({
-                        title,
-                        date,
-                        time: timeInput.value || '',
-                        notes: notesInput.value || ''
-                    });
-                }
+                const ok = await addScheduledTaskFromCalendar({
+                    title,
+                    scheduledDate: date,
+                    scheduledTime: timeInput ? timeInput.value : '',
+                    category: categoryInput ? categoryInput.value : 'Général',
+                    priority: priorityInput ? priorityInput.value : 'medium',
+                    description: notesInput ? notesInput.value : ''
+                });
+                if (!ok) return;
 
                 titleInput.value = '';
-                timeInput.value = '';
-                notesInput.value = '';
+                if (timeInput) timeInput.value = '';
+                if (notesInput) notesInput.value = '';
                 dateInput.value = date;
             });
 

@@ -113,10 +113,15 @@
             padding: 2px 5px;
             border-radius: 3px;
         }
-        .task-due-date {
+        .task-due-date,
+        .task-scheduled-date {
             margin-left: 10px;
             color: #e0e0e0;
             font-size: 0.9em;
+        }
+        .task-scheduled-date {
+            color: #a8d6e8;
+            white-space: nowrap;
         }
         .task-subtasks-count {
             margin-left: 10px;
@@ -136,7 +141,7 @@
             background-color: #444444;
         }
         /* Inputs */
-        input[type="text"], select, textarea {
+        input[type="text"], input[type="date"], input[type="time"], select, textarea {
             padding: 10px;
             margin-right: 10px;
             background-color: #1e1e1e;
@@ -153,7 +158,7 @@
         }
         .subtasks li {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             margin-bottom: 5px;
         }
         .subtasks input[type="checkbox"] {
@@ -170,6 +175,227 @@
             color: #e0e0e0;
             border: 1px solid #333333;
             outline: none;
+        }
+        .scheduled-fields {
+            border: 1px solid #333333;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #191919;
+        }
+        .scheduled-fields h4,
+        .recurrence-fields h4 {
+            margin: 0 0 8px;
+            color: #ffffff;
+        }
+        .scheduled-fields p,
+        .recurrence-fields p {
+            margin: 0 0 10px;
+            color: #aaaaaa;
+            font-size: 0.9em;
+        }
+        .recurrence-fields {
+            border: 1px solid #334133;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #171d17;
+        }
+        .scheduled-input-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 130px;
+            gap: 10px;
+        }
+        .recurrence-input-row,
+        .recurrence-custom-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 110px;
+            gap: 10px;
+            align-items: end;
+        }
+        .recurrence-custom-row {
+            grid-template-columns: 110px minmax(0, 1fr) 130px;
+            margin-top: 8px;
+        }
+        .recurrence-custom-options.hidden,
+        .recurrence-weekdays.hidden,
+        .recurrence-month-day.hidden {
+            display: none;
+        }
+        .recurrence-weekdays {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .recurrence-weekdays label {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: #cccccc;
+            font-size: 0.85em;
+        }
+        .recurrence-weekdays input {
+            width: auto;
+            margin: 0;
+        }
+        .recurrence-summary {
+            color: #bff3cf;
+            font-size: 0.9em;
+        }
+        .quick-task-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+        .quick-task-actions button {
+            margin-left: 0;
+            min-height: 38px;
+        }
+        .detailed-task-modal {
+            width: min(760px, 94vw);
+            max-height: 88vh;
+            overflow: auto;
+        }
+        .detailed-task-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 10px;
+        }
+        .detailed-task-full {
+            grid-column: 1 / -1;
+        }
+        .detailed-recurrence-custom.hidden,
+        .detailed-weekdays.hidden,
+        .detailed-month-day.hidden {
+            display: none;
+        }
+        .detailed-subtask-add {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+        }
+        .detailed-subtask-add input {
+            margin-bottom: 0;
+        }
+        .detailed-subtask-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin: 0 0 8px;
+        }
+        .detailed-subtask-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: center;
+            background: #191919;
+            border: 1px solid #333333;
+            border-radius: 6px;
+            padding: 6px 8px;
+        }
+        .detailed-subtask-row button {
+            background: #3a2424;
+        }
+        .detailed-subtask-row button:hover {
+            background: #513030;
+        }
+        .task-recurrence-badge {
+            margin-left: 10px;
+            color: #bff3cf;
+            font-size: 0.9em;
+            white-space: nowrap;
+        }
+        .subtask-content {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: center;
+            flex: 1;
+        }
+        .subtask-schedule-controls {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 6px;
+            align-items: center;
+            grid-column: 1 / -1;
+        }
+        .subtask-recurrence-controls {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 6px;
+            align-items: center;
+            grid-column: 1 / -1;
+        }
+        .subtask-scheduled-label,
+        .subtask-recurrence-label {
+            color: #a8d6e8;
+            font-size: 0.85em;
+            min-height: 1.2em;
+        }
+        .subtask-recurrence-label {
+            color: #bff3cf;
+        }
+        .subtask-plan-button,
+        .subtask-repeat-button {
+            padding: 4px 8px;
+            font-size: 0.82em;
+            white-space: nowrap;
+        }
+        .subtask-schedule-editor,
+        .subtask-recurrence-editor {
+            grid-column: 1 / -1;
+            border: 1px solid #333333;
+            border-radius: 6px;
+            background-color: #191919;
+            padding: 8px;
+        }
+        .subtask-recurrence-editor {
+            border-color: #334133;
+            background-color: #171d17;
+        }
+        .subtask-schedule-editor.hidden,
+        .subtask-recurrence-editor.hidden {
+            display: none;
+        }
+        .subtask-schedule-inputs,
+        .subtask-recurrence-inputs {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 110px auto auto;
+            gap: 8px;
+            align-items: end;
+        }
+        .subtask-schedule-field label {
+            display: block;
+            margin: 0 0 3px;
+            color: #cccccc;
+            font-size: 0.8em;
+        }
+        .subtask-schedule-field.hidden {
+            display: none;
+        }
+        .subtask-scheduled-date,
+        .subtask-scheduled-time {
+            padding: 6px;
+            margin: 0;
+            font-size: 0.85em;
+        }
+        @media (max-width: 700px) {
+            .task-header {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .scheduled-input-row,
+            .recurrence-input-row,
+            .recurrence-custom-row,
+            .subtask-content,
+            .subtask-schedule-inputs,
+            .subtask-recurrence-inputs,
+            .detailed-task-grid,
+            .detailed-subtask-add {
+                grid-template-columns: 1fr;
+            }
         }
         /* Styles pour les catégories */
         .category-list {
@@ -451,6 +677,99 @@
     </div>
   </div>
 
+  <div id="detailed-task-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="detailed-task-modal-title">
+    <div class="modal detailed-task-modal">
+      <h3 id="detailed-task-modal-title">Créer une tâche détaillée</h3>
+      <form id="detailed-task-form">
+        <div class="detailed-task-grid">
+          <div class="detailed-task-full">
+            <label for="detailed-task-title">Titre</label>
+            <input id="detailed-task-title" name="detailed-task-title" type="text" required autocomplete="off">
+          </div>
+
+          <div>
+            <label for="detailed-task-category">Catégorie</label>
+            <select id="detailed-task-category" name="detailed-task-category"></select>
+          </div>
+
+          <div>
+            <label for="detailed-task-priority">Priorité</label>
+            <select id="detailed-task-priority" name="detailed-task-priority">
+              <option value="low">Basse</option>
+              <option value="medium">Moyenne</option>
+              <option value="high">Haute</option>
+            </select>
+          </div>
+
+          <div class="detailed-task-full">
+            <label for="detailed-task-description">Description</label>
+            <textarea id="detailed-task-description" name="detailed-task-description"></textarea>
+          </div>
+
+          <div class="detailed-task-full">
+            <label for="detailed-task-due-date">Date d'échéance</label>
+            <input id="detailed-task-due-date" name="detailed-task-due-date" type="text" placeholder="Ex : 31/12/2026 ou 20261231" autocomplete="off">
+          </div>
+
+          <div>
+            <label for="detailed-task-scheduled-date">Date certaine</label>
+            <input id="detailed-task-scheduled-date" name="detailed-task-scheduled-date" type="date">
+          </div>
+
+          <div>
+            <label for="detailed-task-scheduled-time">Heure certaine</label>
+            <input id="detailed-task-scheduled-time" name="detailed-task-scheduled-time" type="time">
+          </div>
+
+          <div class="detailed-task-full recurrence-fields">
+            <h4>Récurrence</h4>
+            <p>Règle optionnelle pour une tâche qui revient automatiquement.</p>
+            <div class="recurrence-input-row">
+              <div>
+                <label for="detailed-task-recurrence">Récurrence :</label>
+                <select id="detailed-task-recurrence" name="detailed-task-recurrence"></select>
+              </div>
+              <p id="detailed-task-recurrence-summary" class="recurrence-summary">Répète : aucune</p>
+            </div>
+            <div id="detailed-task-recurrence-custom" class="detailed-recurrence-custom hidden">
+              <div class="recurrence-custom-row">
+                <div>
+                  <label for="detailed-task-recurrence-interval">Tous les</label>
+                  <input id="detailed-task-recurrence-interval" name="detailed-task-recurrence-interval" type="number" min="1" step="1" value="1">
+                </div>
+                <div>
+                  <label for="detailed-task-recurrence-unit">Unité</label>
+                  <select id="detailed-task-recurrence-unit" name="detailed-task-recurrence-unit"></select>
+                </div>
+                <div id="detailed-task-recurrence-month-day-wrap" class="detailed-month-day hidden">
+                  <label for="detailed-task-recurrence-month-day">Jour du mois</label>
+                  <input id="detailed-task-recurrence-month-day" name="detailed-task-recurrence-month-day" type="number" min="1" max="31" step="1">
+                </div>
+              </div>
+              <div id="detailed-task-recurrence-weekdays" class="recurrence-weekdays detailed-weekdays hidden"></div>
+            </div>
+          </div>
+
+          <div class="detailed-task-full">
+            <label for="detailed-task-new-subtask">Sous-tâches initiales</label>
+            <div id="detailed-task-subtasks" class="detailed-subtask-list"></div>
+            <div class="detailed-subtask-add">
+              <input id="detailed-task-new-subtask" name="detailed-task-new-subtask" type="text" placeholder="Nouvelle sous-tâche" autocomplete="off">
+              <button id="detailed-task-add-subtask" type="button">Ajouter sous-tâche</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="detailed-task-error" class="error"></div>
+
+        <div class="actions">
+          <button id="detailed-task-cancel" type="button">Annuler</button>
+          <button id="detailed-task-create" type="submit">Créer la tâche</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div id="project-header">
     <label for="project-title-input" id="project-title-label">Nom du projet&nbsp;:</label>
     <input id="project-title-input" name="project-title" type="text" placeholder="TITRE" aria-label="Nom du projet" autocomplete="off">
@@ -515,7 +834,10 @@
             <label for="task-category" class="sr-only">Catégorie</label>
             <select id="task-category" name="new-task-category" aria-label="Catégorie"><option value="Général">Général</option></select>
 
-            <button id="add-task-btn">Ajouter Tâche</button>
+            <div class="quick-task-actions">
+                <button id="add-task-btn" type="button">Ajouter tâche rapide</button>
+                <button id="open-detailed-task-modal-btn" type="button">Créer une tâche détaillée</button>
+            </div>
         </div>
     </div>
 
@@ -614,6 +936,7 @@ let canUseLocalStorage = false; // indicateur: localStorage utilisable
 let projectTitle = 'TITRE'; // Nom lisible du projet (affiché en haut)
 let projectCelebrated = false;      // évite de rejouer le feu d’artifice
 let projectCompletedAt = null;      // date ISO quand le projet est terminé
+let detailedTaskDraftSubtasks = [];
 
 // === Auto-save vers Firebase (avec anti-spam) ===
 let autosaveTimer = null;
@@ -712,6 +1035,325 @@ function updateTopTabs() {
             }
         })();
 
+function isValidYmdDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
+    const parts = String(value).split('-');
+    const date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    return date.getFullYear() === Number(parts[0])
+        && date.getMonth() === Number(parts[1]) - 1
+        && date.getDate() === Number(parts[2]);
+}
+
+function isValidScheduledTime(value) {
+    return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || ''));
+}
+
+function getDefaultRecurrence() {
+    return {
+        enabled: false,
+        frequency: 'none',
+        interval: 1,
+        daysOfWeek: [],
+        dayOfMonth: null,
+        mode: 'on_completion',
+        nextDate: '',
+        lastCompletedDate: ''
+    };
+}
+
+function normalizeRecurrence(recurrence) {
+    const raw = recurrence && typeof recurrence === 'object' ? recurrence : {};
+    const normalized = getDefaultRecurrence();
+    const allowed = ['none', 'daily', 'weekly', 'monthly', 'custom'];
+    const frequency = allowed.indexOf(raw.frequency) >= 0 ? raw.frequency : 'none';
+    const interval = parseInt(raw.interval, 10);
+    const dayOfMonth = parseInt(raw.dayOfMonth, 10);
+
+    normalized.frequency = frequency;
+    normalized.enabled = !!raw.enabled && frequency !== 'none';
+    normalized.interval = isFinite(interval) && interval >= 1 ? interval : 1;
+    normalized.daysOfWeek = Array.isArray(raw.daysOfWeek)
+        ? raw.daysOfWeek.map(function(day) { return parseInt(day, 10); }).filter(function(day) { return day >= 1 && day <= 7; })
+        : [];
+    normalized.daysOfWeek = Array.from(new Set(normalized.daysOfWeek)).sort(function(a, b) { return a - b; });
+    normalized.dayOfMonth = isFinite(dayOfMonth) && dayOfMonth >= 1 && dayOfMonth <= 31 ? dayOfMonth : null;
+    normalized.mode = raw.mode === 'on_completion' ? 'on_completion' : 'on_completion';
+    normalized.nextDate = isValidYmdDate(raw.nextDate) ? raw.nextDate : '';
+    normalized.lastCompletedDate = isValidYmdDate(raw.lastCompletedDate) ? raw.lastCompletedDate : '';
+
+    if (!normalized.enabled) {
+        normalized.frequency = 'none';
+        normalized.nextDate = '';
+    }
+
+    return normalized;
+}
+
+function normalizeSubtaskDates(subtask) {
+    subtask = subtask || {};
+    if (typeof subtask.title !== 'string') subtask.title = String(subtask.title || '');
+    subtask.completed = !!subtask.completed;
+    subtask.scheduledDate = isValidYmdDate(subtask.scheduledDate) ? subtask.scheduledDate : '';
+    subtask.scheduledTime = isValidScheduledTime(subtask.scheduledTime) ? subtask.scheduledTime : '';
+    subtask.recurrence = normalizeRecurrence(subtask.recurrence);
+    return subtask;
+}
+
+function normalizeTaskDates(task) {
+    task = task || {};
+    task.scheduledDate = isValidYmdDate(task.scheduledDate) ? task.scheduledDate : '';
+    task.scheduledTime = isValidScheduledTime(task.scheduledTime) ? task.scheduledTime : '';
+    task.recurrence = normalizeRecurrence(task.recurrence);
+    task.subtasks = Array.isArray(task.subtasks) ? task.subtasks.map(normalizeSubtaskDates) : [];
+    return task;
+}
+
+function normalizeTasksDates(taskArray) {
+    return Array.isArray(taskArray) ? taskArray.map(normalizeTaskDates) : [];
+}
+
+function formatYmdToFrenchDate(value) {
+    if (!isValidYmdDate(value)) return '';
+    const parts = String(value).split('-');
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function formatScheduledDateTime(date, time) {
+    const formattedDate = formatYmdToFrenchDate(date);
+    if (!formattedDate) return '';
+    return time ? `${formattedDate} ${time}` : formattedDate;
+}
+
+function resolveCategoryName(categoryName) {
+    const wanted = String(categoryName || '').trim();
+    if (categories.some(function(cat) { return cat.name === wanted; })) return wanted;
+    if (categories.some(function(cat) { return cat.name === 'Général'; })) return 'Général';
+    return categories[0] && categories[0].name ? categories[0].name : 'Général';
+}
+
+function buildDefaultSubtask(title) {
+    return normalizeSubtaskDates({
+        title: String(title || '').trim(),
+        completed: false,
+        scheduledDate: '',
+        scheduledTime: '',
+        recurrence: getDefaultRecurrence()
+    });
+}
+
+function buildDefaultTask(overrides) {
+    overrides = overrides || {};
+    return normalizeTaskDates({
+        id: overrides.id || Date.now(),
+        title: String(overrides.title || '').trim(),
+        priority: ['low', 'medium', 'high'].indexOf(overrides.priority) >= 0 ? overrides.priority : 'medium',
+        category: resolveCategoryName(overrides.category),
+        completed: false,
+        completionDate: null,
+        description: String(overrides.description || ''),
+        subtasks: Array.isArray(overrides.subtasks) ? overrides.subtasks.map(normalizeSubtaskDates) : [],
+        dueDate: overrides.dueDate || '',
+        dueDateDisplay: overrides.dueDateDisplay || '',
+        scheduledDate: isValidYmdDate(overrides.scheduledDate) ? overrides.scheduledDate : '',
+        scheduledTime: isValidYmdDate(overrides.scheduledDate) && isValidScheduledTime(overrides.scheduledTime) ? overrides.scheduledTime : '',
+        recurrence: normalizeRecurrence(overrides.recurrence),
+        expanded: typeof overrides.expanded === 'boolean' ? overrides.expanded : false
+    });
+}
+
+function ymdToLocalDate(value) {
+    if (!isValidYmdDate(value)) return null;
+    const parts = String(value).split('-').map(function(part) { return Number(part); });
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+function localDateToYmd(date) {
+    if (!(date instanceof Date) || isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getTodayYmd() {
+    return localDateToYmd(new Date());
+}
+
+function addDaysYmd(value, days) {
+    const date = ymdToLocalDate(value);
+    if (!date) return '';
+    date.setDate(date.getDate() + Number(days || 0));
+    return localDateToYmd(date);
+}
+
+function lastDayOfMonth(year, monthIndex) {
+    return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+function addMonthsYmd(value, months, preferredDay) {
+    const date = ymdToLocalDate(value);
+    if (!date) return '';
+    const target = new Date(date.getFullYear(), date.getMonth() + Number(months || 0), 1);
+    const requestedDay = preferredDay || date.getDate();
+    const safeDay = Math.min(requestedDay, lastDayOfMonth(target.getFullYear(), target.getMonth()));
+    target.setDate(safeDay);
+    return localDateToYmd(target);
+}
+
+function getWeekdayYmd(value) {
+    const date = ymdToLocalDate(value);
+    if (!date) return 1;
+    return ((date.getDay() + 6) % 7) + 1;
+}
+
+function getCustomRecurrenceUnit(recurrence) {
+    if (recurrence.dayOfMonth) return 'monthly';
+    if (Array.isArray(recurrence.daysOfWeek) && recurrence.daysOfWeek.length) return 'weekly';
+    return 'daily';
+}
+
+function calculateNextRecurrenceDate(recurrence, fromDate) {
+    const normalized = normalizeRecurrence(recurrence);
+    const startDate = isValidYmdDate(fromDate) ? fromDate : getTodayYmd();
+    const interval = Math.max(1, normalized.interval || 1);
+    let frequency = normalized.frequency;
+
+    if (!normalized.enabled) return '';
+    if (frequency === 'custom') {
+        frequency = getCustomRecurrenceUnit(normalized);
+    }
+
+    if (frequency === 'daily') {
+        return addDaysYmd(startDate, interval);
+    }
+
+    if (frequency === 'weekly') {
+        if (!normalized.daysOfWeek.length) return addDaysYmd(startDate, 7 * interval);
+        const currentDay = getWeekdayYmd(startDate);
+        for (let i = 0; i < normalized.daysOfWeek.length; i++) {
+            if (normalized.daysOfWeek[i] > currentDay) {
+                return addDaysYmd(startDate, normalized.daysOfWeek[i] - currentDay);
+            }
+        }
+        return addDaysYmd(startDate, (7 - currentDay + normalized.daysOfWeek[0]) + (7 * (interval - 1)));
+    }
+
+    if (frequency === 'monthly') {
+        return addMonthsYmd(startDate, interval, normalized.dayOfMonth || null);
+    }
+
+    return '';
+}
+
+function ensureRecurrenceStartDate(item) {
+    item.recurrence = normalizeRecurrence(item.recurrence);
+    if (!item.recurrence.enabled) return;
+    if (!item.recurrence.nextDate) {
+        item.recurrence.nextDate = item.scheduledDate || getTodayYmd();
+    }
+    if (!item.scheduledDate) {
+        item.scheduledDate = item.recurrence.nextDate;
+    }
+}
+
+function applyTaskRecurrenceOnCompletion(task) {
+    normalizeTaskDates(task);
+    if (!task.recurrence.enabled) return false;
+    const today = getTodayYmd();
+    const nextDate = calculateNextRecurrenceDate(task.recurrence, today);
+    task.recurrence.lastCompletedDate = today;
+    task.recurrence.nextDate = nextDate;
+    task.scheduledDate = nextDate || task.scheduledDate;
+    task.completed = false;
+    task.completionDate = null;
+    return true;
+}
+
+function applySubtaskRecurrenceOnCompletion(subtask) {
+    normalizeSubtaskDates(subtask);
+    if (!subtask.recurrence.enabled) return false;
+    const today = getTodayYmd();
+    const nextDate = calculateNextRecurrenceDate(subtask.recurrence, today);
+    subtask.recurrence.lastCompletedDate = today;
+    subtask.recurrence.nextDate = nextDate;
+    subtask.scheduledDate = nextDate || subtask.scheduledDate;
+    subtask.completed = false;
+    return true;
+}
+
+function formatRecurrenceSummary(recurrence) {
+    const normalized = normalizeRecurrence(recurrence);
+    const days = ['', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];
+    let text = '';
+    let unit = '';
+
+    if (!normalized.enabled) return 'Aucune récurrence';
+    if (normalized.frequency === 'daily') text = normalized.interval === 1 ? 'tous les jours' : `tous les ${normalized.interval} jours`;
+    if (normalized.frequency === 'weekly') text = normalized.interval === 1 ? 'toutes les semaines' : `toutes les ${normalized.interval} semaines`;
+    if (normalized.frequency === 'monthly') text = normalized.interval === 1 ? 'tous les mois' : `tous les ${normalized.interval} mois`;
+    if (normalized.frequency === 'custom') {
+        unit = getCustomRecurrenceUnit(normalized);
+        if (unit === 'daily') text = normalized.interval === 1 ? 'tous les jours' : `tous les ${normalized.interval} jours`;
+        if (unit === 'weekly') text = normalized.interval === 1 ? 'toutes les semaines' : `toutes les ${normalized.interval} semaines`;
+        if (unit === 'monthly') text = normalized.interval === 1 ? 'tous les mois' : `tous les ${normalized.interval} mois`;
+    }
+    if ((normalized.frequency === 'weekly' || unit === 'weekly') && normalized.daysOfWeek.length) {
+        text += ` (${normalized.daysOfWeek.map(function(day) { return days[day]; }).join(', ')})`;
+    }
+    if ((normalized.frequency === 'monthly' || unit === 'monthly') && normalized.dayOfMonth) {
+        text += ` le ${normalized.dayOfMonth}`;
+    }
+    return text || 'récurrence active';
+}
+
+function formatRecurrenceBadge(recurrence) {
+    const normalized = normalizeRecurrence(recurrence);
+    if (!normalized.enabled) return '';
+    if (normalized.nextDate) return `🔁 Prochaine : ${formatYmdToFrenchDate(normalized.nextDate)}`;
+    return `🔁 ${formatRecurrenceSummary(normalized)}`;
+}
+
+function getYmdDayOfMonth(value) {
+    if (!isValidYmdDate(value)) return new Date().getDate();
+    return Number(String(value).split('-')[2]);
+}
+
+function buildRecurrenceFromSelection(item, selection) {
+    const recurrence = getDefaultRecurrence();
+    const frequency = selection.frequency || 'none';
+    const interval = parseInt(selection.interval, 10);
+    const dayOfMonth = parseInt(selection.dayOfMonth, 10);
+    const previousNextDate = isValidYmdDate(selection.previousNextDate) ? selection.previousNextDate : '';
+
+    if (frequency === 'none') return recurrence;
+
+    recurrence.enabled = true;
+    recurrence.frequency = frequency;
+    recurrence.interval = frequency === 'custom' && isFinite(interval) && interval >= 1 ? interval : 1;
+
+    if (frequency === 'monthly') {
+        recurrence.dayOfMonth = getYmdDayOfMonth(item.scheduledDate || getTodayYmd());
+    }
+
+    if (frequency === 'custom') {
+        if (selection.unit === 'weekly') {
+            recurrence.daysOfWeek = Array.isArray(selection.daysOfWeek) ? selection.daysOfWeek.slice() : [];
+            if (!recurrence.daysOfWeek.length) {
+                recurrence.daysOfWeek = [getWeekdayYmd(item.scheduledDate || getTodayYmd())];
+            }
+        } else if (selection.unit === 'monthly') {
+            recurrence.dayOfMonth = isFinite(dayOfMonth) && dayOfMonth >= 1 && dayOfMonth <= 31
+                ? dayOfMonth
+                : getYmdDayOfMonth(item.scheduledDate || getTodayYmd());
+        }
+    }
+
+    recurrence.nextDate = previousNextDate || item.scheduledDate || getTodayYmd();
+    item.recurrence = recurrence;
+    ensureRecurrenceStartDate(item);
+    return item.recurrence;
+}
+
         // Charger les données depuis le stockage (localStorage prioritaire, sinon <textarea> caché)
         function loadData() {
             const syncTextarea = document.getElementById('sync-data');
@@ -729,7 +1371,7 @@ function updateTopTabs() {
 
             try {
                 const data = JSON.parse(jsonText || '{}');
-                tasks = data.tasks || [];
+                tasks = normalizeTasksDates(data.tasks || []);
                 categories = data.categories || [];
                 sectionStates = data.sectionStates || {};
                 sortCriteria = data.sortCriteria || [];
@@ -755,6 +1397,7 @@ function updateTopTabs() {
 
 function saveData() {
     const syncTextarea = document.getElementById('sync-data');
+    tasks = normalizeTasksDates(tasks);
     const data = { tasks, categories, sectionStates, sortCriteria, projectTitle, projectCelebrated, projectCompletedAt };
     const jsonData = JSON.stringify(data, null, 2);
 
@@ -783,6 +1426,7 @@ function saveData() {
 
         function updateSyncBox() {
             const syncBox = document.getElementById('sync-box');
+            tasks = normalizeTasksDates(tasks);
             const data = { tasks, categories, sectionStates, sortCriteria, projectTitle, projectCelebrated, projectCompletedAt };
             syncBox.value = JSON.stringify(data, null, 2);
         }
@@ -790,6 +1434,7 @@ function saveData() {
 // === Synchronisation iCloud via Raccourcis ===
 // Renvoie l'état complet au format JSON (string)
 function todoGetState() {
+    tasks = normalizeTasksDates(tasks);
     const data = { tasks, categories, sectionStates, sortCriteria, projectTitle, projectCelebrated, projectCompletedAt };
     return JSON.stringify(data);
 }
@@ -798,7 +1443,7 @@ function todoGetState() {
 function todoSetState(state) {
     try {
         const obj = (typeof state === 'string') ? JSON.parse(state) : state;
-        tasks = obj.tasks || [];
+        tasks = normalizeTasksDates(obj.tasks || []);
         categories = obj.categories || [];
         sectionStates = obj.sectionStates || {};
         sortCriteria = obj.sortCriteria || [];
@@ -1191,7 +1836,7 @@ async function cloudSave(options) {
                 if (e.key === STORAGE_KEY && canUseLocalStorage) {
                     try {
                         const data = JSON.parse(e.newValue || '{}');
-                        tasks = data.tasks || [];
+                        tasks = normalizeTasksDates(data.tasks || []);
                         categories = data.categories || [];
                         sectionStates = data.sectionStates || {};
                         sortCriteria = data.sortCriteria || [];
@@ -1327,6 +1972,7 @@ async function cloudSave(options) {
                 option.textContent = category.name;
                 taskCategorySelect.appendChild(option);
             });
+            syncDetailedTaskCategoryOptions();
 
             // Mise à jour du filtre de catégorie
             const filterCategorySelect = document.getElementById('filter-category');
@@ -1460,18 +2106,12 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
   const priority = document.getElementById('task-priority').value;
   const categoryName = document.getElementById('task-category').value;
   if (title) {
-    const task = {
-      id: Date.now(),
+    const task = buildDefaultTask({
       title,
       priority,
       category: categoryName,
-      completed: false,
-      completionDate: null,
-      description: '',
-      subtasks: [],
-      dueDate: '',
       expanded: false
-    };
+    });
     tasks.push(task);
     // Si le projet était marqué comme “fêté”, on le réarme
     if (projectCelebrated) {
@@ -1542,6 +2182,723 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
             return null;
         }
 
+        function syncDetailedTaskCategoryOptions() {
+            const select = document.getElementById('detailed-task-category');
+            if (!select) return;
+            const quickCategory = document.getElementById('task-category');
+            const currentValue = select.value || (quickCategory ? quickCategory.value : '') || 'Général';
+            const sourceCategories = categories.length ? categories : [{ name: 'Général', color: '#ffffff' }];
+
+            select.innerHTML = '';
+            sourceCategories.forEach(function(category) {
+                const option = document.createElement('option');
+                option.value = category.name;
+                option.textContent = category.name;
+                select.appendChild(option);
+            });
+            select.value = sourceCategories.some(function(category) { return category.name === currentValue; })
+                ? currentValue
+                : resolveCategoryName(currentValue);
+        }
+
+        function ensureDetailedRecurrenceOptions() {
+            const frequencySelect = document.getElementById('detailed-task-recurrence');
+            const unitSelect = document.getElementById('detailed-task-recurrence-unit');
+            const weekdays = document.getElementById('detailed-task-recurrence-weekdays');
+            if (frequencySelect && !frequencySelect.options.length) appendRecurrenceOptions(frequencySelect);
+            if (unitSelect && !unitSelect.options.length) appendRecurrenceUnitOptions(unitSelect);
+            if (weekdays && !weekdays.children.length) renderWeekdayCheckboxes(weekdays, [], 'detailed-task-recurrence-weekday');
+        }
+
+        function setDetailedTaskError(message) {
+            const error = document.getElementById('detailed-task-error');
+            if (!error) return;
+            error.textContent = message || '';
+            error.style.display = message ? 'block' : 'none';
+        }
+
+        function collectDetailedTaskRecurrence(scheduledDate) {
+            ensureDetailedRecurrenceOptions();
+            const frequencySelect = document.getElementById('detailed-task-recurrence');
+            const intervalInput = document.getElementById('detailed-task-recurrence-interval');
+            const unitSelect = document.getElementById('detailed-task-recurrence-unit');
+            const weekdays = document.getElementById('detailed-task-recurrence-weekdays');
+            const monthDayInput = document.getElementById('detailed-task-recurrence-month-day');
+            const draft = {
+                scheduledDate: isValidYmdDate(scheduledDate) ? scheduledDate : '',
+                recurrence: getDefaultRecurrence()
+            };
+
+            return buildRecurrenceFromSelection(draft, {
+                frequency: frequencySelect ? frequencySelect.value : 'none',
+                interval: intervalInput ? intervalInput.value : '1',
+                unit: unitSelect ? unitSelect.value : 'daily',
+                daysOfWeek: weekdays ? collectCheckedWeekdays(weekdays) : [],
+                dayOfMonth: monthDayInput ? monthDayInput.value : '',
+                previousNextDate: ''
+            });
+        }
+
+        function updateDetailedRecurrenceControls() {
+            ensureDetailedRecurrenceOptions();
+            const frequencySelect = document.getElementById('detailed-task-recurrence');
+            const unitSelect = document.getElementById('detailed-task-recurrence-unit');
+            const custom = document.getElementById('detailed-task-recurrence-custom');
+            const weekdays = document.getElementById('detailed-task-recurrence-weekdays');
+            const monthDayWrap = document.getElementById('detailed-task-recurrence-month-day-wrap');
+            const scheduledDateInput = document.getElementById('detailed-task-scheduled-date');
+            const summary = document.getElementById('detailed-task-recurrence-summary');
+            const isCustom = frequencySelect && frequencySelect.value === 'custom';
+            const unit = unitSelect ? unitSelect.value : 'daily';
+
+            if (custom) custom.classList.toggle('hidden', !isCustom);
+            if (weekdays) weekdays.classList.toggle('hidden', !isCustom || unit !== 'weekly');
+            if (monthDayWrap) monthDayWrap.classList.toggle('hidden', !isCustom || unit !== 'monthly');
+
+            const recurrence = collectDetailedTaskRecurrence(scheduledDateInput ? scheduledDateInput.value : '');
+            if (summary) {
+                summary.textContent = recurrence.enabled
+                    ? `Répète : ${formatRecurrenceSummary(recurrence)}${recurrence.nextDate ? ` | Prochaine occurrence : ${formatYmdToFrenchDate(recurrence.nextDate)}` : ''}`
+                    : 'Répète : aucune';
+            }
+        }
+
+        function renderDetailedTaskDraftSubtasks() {
+            const list = document.getElementById('detailed-task-subtasks');
+            if (!list) return;
+            list.innerHTML = '';
+
+            detailedTaskDraftSubtasks.forEach(function(subtask, index) {
+                const row = document.createElement('div');
+                row.className = 'detailed-subtask-row';
+
+                const title = document.createElement('span');
+                title.textContent = subtask.title;
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.textContent = 'Supprimer';
+                removeBtn.addEventListener('click', function() {
+                    detailedTaskDraftSubtasks.splice(index, 1);
+                    renderDetailedTaskDraftSubtasks();
+                });
+
+                row.appendChild(title);
+                row.appendChild(removeBtn);
+                list.appendChild(row);
+            });
+        }
+
+        function addDetailedTaskDraftSubtask() {
+            const input = document.getElementById('detailed-task-new-subtask');
+            const title = input ? input.value.trim() : '';
+            if (!title) return;
+            detailedTaskDraftSubtasks.push(buildDefaultSubtask(title));
+            if (input) input.value = '';
+            renderDetailedTaskDraftSubtasks();
+        }
+
+        function resetDetailedTaskModal() {
+            const quickPriority = document.getElementById('task-priority');
+            const quickCategory = document.getElementById('task-category');
+            const titleInput = document.getElementById('detailed-task-title');
+            const categoryInput = document.getElementById('detailed-task-category');
+            const priorityInput = document.getElementById('detailed-task-priority');
+            const descriptionInput = document.getElementById('detailed-task-description');
+            const dueDateInput = document.getElementById('detailed-task-due-date');
+            const scheduledDateInput = document.getElementById('detailed-task-scheduled-date');
+            const scheduledTimeInput = document.getElementById('detailed-task-scheduled-time');
+            const frequencySelect = document.getElementById('detailed-task-recurrence');
+            const intervalInput = document.getElementById('detailed-task-recurrence-interval');
+            const unitSelect = document.getElementById('detailed-task-recurrence-unit');
+            const monthDayInput = document.getElementById('detailed-task-recurrence-month-day');
+
+            ensureDetailedRecurrenceOptions();
+            syncDetailedTaskCategoryOptions();
+            detailedTaskDraftSubtasks = [];
+            if (titleInput) titleInput.value = '';
+            if (categoryInput) categoryInput.value = resolveCategoryName(quickCategory ? quickCategory.value : 'Général');
+            if (priorityInput) priorityInput.value = quickPriority ? quickPriority.value : 'medium';
+            if (descriptionInput) descriptionInput.value = '';
+            if (dueDateInput) dueDateInput.value = '';
+            if (scheduledDateInput) scheduledDateInput.value = '';
+            if (scheduledTimeInput) scheduledTimeInput.value = '';
+            if (frequencySelect) frequencySelect.value = 'none';
+            if (intervalInput) intervalInput.value = '1';
+            if (unitSelect) unitSelect.value = 'daily';
+            if (monthDayInput) monthDayInput.value = String(new Date().getDate());
+            const weekdays = document.getElementById('detailed-task-recurrence-weekdays');
+            if (weekdays) renderWeekdayCheckboxes(weekdays, [], 'detailed-task-recurrence-weekday');
+            setDetailedTaskError('');
+            renderDetailedTaskDraftSubtasks();
+            updateDetailedRecurrenceControls();
+        }
+
+        function openDetailedTaskModal() {
+            const modal = document.getElementById('detailed-task-modal');
+            const titleInput = document.getElementById('detailed-task-title');
+            if (!modal) return;
+            resetDetailedTaskModal();
+            modal.style.display = 'flex';
+            setTimeout(function() {
+                if (titleInput) titleInput.focus();
+            }, 0);
+        }
+
+        function closeDetailedTaskModal() {
+            const modal = document.getElementById('detailed-task-modal');
+            if (modal) modal.style.display = 'none';
+            setDetailedTaskError('');
+        }
+
+        function createDetailedTaskFromModal() {
+            const titleInput = document.getElementById('detailed-task-title');
+            const categoryInput = document.getElementById('detailed-task-category');
+            const priorityInput = document.getElementById('detailed-task-priority');
+            const descriptionInput = document.getElementById('detailed-task-description');
+            const dueDateInput = document.getElementById('detailed-task-due-date');
+            const scheduledDateInput = document.getElementById('detailed-task-scheduled-date');
+            const scheduledTimeInput = document.getElementById('detailed-task-scheduled-time');
+            const title = titleInput ? titleInput.value.trim() : '';
+            const dueDateText = dueDateInput ? dueDateInput.value.trim() : '';
+            let dueDate = '';
+            let dueDateDisplay = '';
+            const scheduledDate = scheduledDateInput && isValidYmdDate(scheduledDateInput.value) ? scheduledDateInput.value : '';
+            const scheduledTime = scheduledDate && scheduledTimeInput && isValidScheduledTime(scheduledTimeInput.value) ? scheduledTimeInput.value : '';
+
+            if (!title) {
+                setDetailedTaskError('Le titre est obligatoire.');
+                if (titleInput) titleInput.focus();
+                return false;
+            }
+
+            if (dueDateText) {
+                const parsedDate = parseDate(dueDateText);
+                if (!parsedDate) {
+                    setDetailedTaskError("La date d'échéance est invalide.");
+                    if (dueDateInput) dueDateInput.focus();
+                    return false;
+                }
+                dueDate = parsedDate.toISOString();
+                dueDateDisplay = dueDateText;
+            }
+
+            const recurrence = collectDetailedTaskRecurrence(scheduledDate);
+            const task = buildDefaultTask({
+                title: title,
+                category: categoryInput ? categoryInput.value : 'Général',
+                priority: priorityInput ? priorityInput.value : 'medium',
+                description: descriptionInput ? descriptionInput.value : '',
+                subtasks: detailedTaskDraftSubtasks.slice(),
+                dueDate: dueDate,
+                dueDateDisplay: dueDateDisplay,
+                scheduledDate: scheduledDate,
+                scheduledTime: scheduledTime,
+                recurrence: recurrence,
+                expanded: true
+            });
+
+            tasks.push(task);
+            if (projectCelebrated) {
+                projectCelebrated = false;
+                projectCompletedAt = null;
+            }
+            saveData();
+            renderTasks();
+            checkProjectCompletion();
+            closeDetailedTaskModal();
+            return true;
+        }
+
+        function bindDetailedTaskModalControls() {
+            const openBtn = document.getElementById('open-detailed-task-modal-btn');
+            const cancelBtn = document.getElementById('detailed-task-cancel');
+            const form = document.getElementById('detailed-task-form');
+            const addSubtaskBtn = document.getElementById('detailed-task-add-subtask');
+            const newSubtaskInput = document.getElementById('detailed-task-new-subtask');
+            const frequencySelect = document.getElementById('detailed-task-recurrence');
+            const intervalInput = document.getElementById('detailed-task-recurrence-interval');
+            const unitSelect = document.getElementById('detailed-task-recurrence-unit');
+            const monthDayInput = document.getElementById('detailed-task-recurrence-month-day');
+            const weekdays = document.getElementById('detailed-task-recurrence-weekdays');
+            const scheduledDateInput = document.getElementById('detailed-task-scheduled-date');
+
+            if (openBtn) openBtn.addEventListener('click', openDetailedTaskModal);
+            if (cancelBtn) cancelBtn.addEventListener('click', closeDetailedTaskModal);
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    createDetailedTaskFromModal();
+                });
+            }
+            if (addSubtaskBtn) addSubtaskBtn.addEventListener('click', addDetailedTaskDraftSubtask);
+            if (newSubtaskInput) {
+                newSubtaskInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addDetailedTaskDraftSubtask();
+                    }
+                });
+            }
+            [frequencySelect, intervalInput, unitSelect, monthDayInput, weekdays, scheduledDateInput].forEach(function(el) {
+                if (el) el.addEventListener('change', updateDetailedRecurrenceControls);
+            });
+            window.addEventListener('keydown', function(e) {
+                const modal = document.getElementById('detailed-task-modal');
+                if (e.key === 'Escape' && modal && modal.style.display === 'flex') {
+                    e.preventDefault();
+                    closeDetailedTaskModal();
+                }
+            });
+        }
+
+        function renderSubtaskScheduleControls(task, subtask, index) {
+            normalizeSubtaskDates(subtask);
+
+            const controls = document.createElement('div');
+            controls.className = 'subtask-schedule-controls';
+
+            const scheduledLabel = document.createElement('span');
+            scheduledLabel.className = 'subtask-scheduled-label';
+
+            const toggleButton = document.createElement('button');
+            toggleButton.type = 'button';
+            toggleButton.className = 'subtask-plan-button';
+            toggleButton.setAttribute('aria-label', 'Planifier la sous-tâche');
+
+            const editor = document.createElement('div');
+            editor.className = 'subtask-schedule-editor hidden';
+            const editorId = `subtask-schedule-${task.id}-${index}`;
+            editor.id = editorId;
+            toggleButton.setAttribute('aria-controls', editorId);
+            toggleButton.setAttribute('aria-expanded', 'false');
+            editor.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            const inputRow = document.createElement('div');
+            inputRow.className = 'subtask-schedule-inputs';
+
+            const dateWrap = document.createElement('div');
+            dateWrap.className = 'subtask-schedule-field';
+            const dateLabel = document.createElement('label');
+            dateLabel.textContent = 'Date certaine';
+            const dateInput = document.createElement('input');
+            dateInput.type = 'date';
+            dateInput.className = 'subtask-scheduled-date';
+            dateInput.value = subtask.scheduledDate || '';
+            const dateId = `subtask-scheduled-date-${task.id}-${index}`;
+            dateInput.id = dateId;
+            dateInput.setAttribute('aria-label', 'Date certaine de la sous-tâche');
+            dateLabel.htmlFor = dateId;
+
+            const timeWrap = document.createElement('div');
+            timeWrap.className = 'subtask-schedule-field';
+            const timeLabel = document.createElement('label');
+            timeLabel.textContent = 'Heure';
+            const timeInput = document.createElement('input');
+            timeInput.type = 'time';
+            timeInput.className = 'subtask-scheduled-time';
+            timeInput.value = subtask.scheduledTime || '';
+            const timeId = `subtask-scheduled-time-${task.id}-${index}`;
+            timeInput.id = timeId;
+            timeInput.setAttribute('aria-label', 'Heure certaine de la sous-tâche');
+            timeLabel.htmlFor = timeId;
+
+            const okButton = document.createElement('button');
+            okButton.type = 'button';
+            okButton.textContent = 'OK';
+
+            const clearButton = document.createElement('button');
+            clearButton.type = 'button';
+            clearButton.textContent = 'Effacer';
+
+            function refreshSummary() {
+                const text = formatScheduledDateTime(subtask.scheduledDate, subtask.scheduledTime);
+                scheduledLabel.textContent = text ? `📅 ${text}` : '';
+                toggleButton.textContent = editor.classList.contains('hidden')
+                    ? (text ? 'Modifier' : 'Planifier')
+                    : 'Fermer';
+            }
+
+            function saveSubtaskSchedule() {
+                subtask.scheduledDate = isValidYmdDate(dateInput.value) ? dateInput.value : '';
+                subtask.scheduledTime = subtask.scheduledDate && isValidScheduledTime(timeInput.value) ? timeInput.value : '';
+                if (!subtask.scheduledDate) {
+                    dateInput.value = '';
+                    timeInput.value = '';
+                }
+                saveData();
+                renderTasks();
+            }
+
+            toggleButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                editor.classList.toggle('hidden');
+                toggleButton.setAttribute('aria-expanded', editor.classList.contains('hidden') ? 'false' : 'true');
+                refreshSummary();
+            });
+
+            okButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                saveSubtaskSchedule();
+            });
+
+            clearButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                subtask.scheduledDate = '';
+                subtask.scheduledTime = '';
+                saveData();
+                renderTasks();
+            });
+
+            dateWrap.appendChild(dateLabel);
+            dateWrap.appendChild(dateInput);
+            timeWrap.appendChild(timeLabel);
+            timeWrap.appendChild(timeInput);
+            inputRow.appendChild(dateWrap);
+            inputRow.appendChild(timeWrap);
+            inputRow.appendChild(okButton);
+            inputRow.appendChild(clearButton);
+            editor.appendChild(inputRow);
+
+            controls.appendChild(scheduledLabel);
+            controls.appendChild(toggleButton);
+            controls.appendChild(editor);
+            refreshSummary();
+
+            return controls;
+        }
+
+        function appendRecurrenceOptions(select) {
+            [
+                ['none', 'Aucune'],
+                ['daily', 'Tous les jours'],
+                ['weekly', 'Toutes les semaines'],
+                ['monthly', 'Tous les mois'],
+                ['custom', 'Personnalisée']
+            ].forEach(function(item) {
+                const option = document.createElement('option');
+                option.value = item[0];
+                option.textContent = item[1];
+                select.appendChild(option);
+            });
+        }
+
+        function appendRecurrenceUnitOptions(select) {
+            [
+                ['daily', 'jours'],
+                ['weekly', 'semaines'],
+                ['monthly', 'mois']
+            ].forEach(function(item) {
+                const option = document.createElement('option');
+                option.value = item[0];
+                option.textContent = item[1];
+                select.appendChild(option);
+            });
+        }
+
+        function renderWeekdayCheckboxes(container, selectedDays, idPrefix) {
+            const dayLabels = [
+                [1, 'Lun'],
+                [2, 'Mar'],
+                [3, 'Mer'],
+                [4, 'Jeu'],
+                [5, 'Ven'],
+                [6, 'Sam'],
+                [7, 'Dim']
+            ];
+            container.innerHTML = '';
+            dayLabels.forEach(function(day) {
+                const label = document.createElement('label');
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.value = String(day[0]);
+                input.id = `${idPrefix}-${day[0]}`;
+                input.checked = selectedDays.indexOf(day[0]) >= 0;
+                label.htmlFor = input.id;
+                label.appendChild(input);
+                label.appendChild(document.createTextNode(day[1]));
+                container.appendChild(label);
+            });
+        }
+
+        function collectCheckedWeekdays(container) {
+            return Array.from(container.querySelectorAll('input[type="checkbox"]:checked'))
+                .map(function(input) { return Number(input.value); })
+                .filter(function(day) { return day >= 1 && day <= 7; });
+        }
+
+        function renderTaskRecurrenceControls(task, updateTaskScheduledSummary) {
+            task.recurrence = normalizeRecurrence(task.recurrence);
+            ensureRecurrenceStartDate(task);
+
+            const section = document.createElement('div');
+            section.className = 'recurrence-fields';
+
+            const title = document.createElement('h4');
+            title.textContent = 'Récurrence';
+
+            const help = document.createElement('p');
+            help.textContent = 'Règle optionnelle pour une tâche qui revient automatiquement, distincte de l’échéance et de la date certaine.';
+
+            const row = document.createElement('div');
+            row.className = 'recurrence-input-row';
+
+            const frequencyWrap = document.createElement('div');
+            const frequencyLabel = document.createElement('label');
+            frequencyLabel.textContent = 'Récurrence :';
+            const frequencySelect = document.createElement('select');
+            const frequencyId = `recurrence-frequency-${task.id}`;
+            frequencySelect.id = frequencyId;
+            frequencySelect.name = 'task-recurrence';
+            appendRecurrenceOptions(frequencySelect);
+            frequencySelect.value = task.recurrence.enabled ? task.recurrence.frequency : 'none';
+            frequencyLabel.htmlFor = frequencyId;
+            frequencyWrap.appendChild(frequencyLabel);
+            frequencyWrap.appendChild(frequencySelect);
+
+            const summary = document.createElement('p');
+            summary.className = 'recurrence-summary';
+
+            const customOptions = document.createElement('div');
+            customOptions.className = 'recurrence-custom-options';
+
+            const customRow = document.createElement('div');
+            customRow.className = 'recurrence-custom-row';
+
+            const intervalWrap = document.createElement('div');
+            const intervalLabel = document.createElement('label');
+            intervalLabel.textContent = 'Tous les';
+            const intervalInput = document.createElement('input');
+            intervalInput.type = 'number';
+            intervalInput.min = '1';
+            intervalInput.step = '1';
+            intervalInput.value = String(Math.max(1, task.recurrence.interval || 1));
+            const intervalId = `recurrence-interval-${task.id}`;
+            intervalInput.id = intervalId;
+            intervalLabel.htmlFor = intervalId;
+            intervalWrap.appendChild(intervalLabel);
+            intervalWrap.appendChild(intervalInput);
+
+            const unitWrap = document.createElement('div');
+            const unitLabel = document.createElement('label');
+            unitLabel.textContent = 'Unité :';
+            const unitSelect = document.createElement('select');
+            const unitId = `recurrence-unit-${task.id}`;
+            unitSelect.id = unitId;
+            appendRecurrenceUnitOptions(unitSelect);
+            unitSelect.value = getCustomRecurrenceUnit(task.recurrence);
+            unitLabel.htmlFor = unitId;
+            unitWrap.appendChild(unitLabel);
+            unitWrap.appendChild(unitSelect);
+
+            const monthDayWrap = document.createElement('div');
+            monthDayWrap.className = 'recurrence-month-day';
+            const monthDayLabel = document.createElement('label');
+            monthDayLabel.textContent = 'Jour du mois :';
+            const monthDayInput = document.createElement('input');
+            monthDayInput.type = 'number';
+            monthDayInput.min = '1';
+            monthDayInput.max = '31';
+            monthDayInput.step = '1';
+            monthDayInput.value = String(task.recurrence.dayOfMonth || getYmdDayOfMonth(task.scheduledDate || getTodayYmd()));
+            const monthDayId = `recurrence-month-day-${task.id}`;
+            monthDayInput.id = monthDayId;
+            monthDayLabel.htmlFor = monthDayId;
+            monthDayWrap.appendChild(monthDayLabel);
+            monthDayWrap.appendChild(monthDayInput);
+
+            const weekdays = document.createElement('div');
+            weekdays.className = 'recurrence-weekdays';
+            renderWeekdayCheckboxes(weekdays, task.recurrence.daysOfWeek || [], `recurrence-weekday-${task.id}`);
+
+            function refreshVisibility() {
+                customOptions.classList.toggle('hidden', frequencySelect.value !== 'custom');
+                weekdays.classList.toggle('hidden', frequencySelect.value !== 'custom' || unitSelect.value !== 'weekly');
+                monthDayWrap.classList.toggle('hidden', frequencySelect.value !== 'custom' || unitSelect.value !== 'monthly');
+                summary.textContent = task.recurrence.enabled
+                    ? `Répète : ${formatRecurrenceSummary(task.recurrence)}${task.recurrence.nextDate ? ` | Prochaine occurrence : ${formatYmdToFrenchDate(task.recurrence.nextDate)}` : ''}`
+                    : 'Répète : aucune';
+            }
+
+            function saveTaskRecurrence() {
+                task.recurrence = buildRecurrenceFromSelection(task, {
+                    frequency: frequencySelect.value,
+                    interval: intervalInput.value,
+                    unit: unitSelect.value,
+                    daysOfWeek: collectCheckedWeekdays(weekdays),
+                    dayOfMonth: monthDayInput.value,
+                    previousNextDate: task.recurrence.nextDate
+                });
+                if (typeof updateTaskScheduledSummary === 'function') updateTaskScheduledSummary();
+                saveData();
+                renderTasks();
+            }
+
+            frequencySelect.addEventListener('change', saveTaskRecurrence);
+            intervalInput.addEventListener('change', saveTaskRecurrence);
+            unitSelect.addEventListener('change', saveTaskRecurrence);
+            monthDayInput.addEventListener('change', saveTaskRecurrence);
+            weekdays.addEventListener('change', saveTaskRecurrence);
+
+            customRow.appendChild(intervalWrap);
+            customRow.appendChild(unitWrap);
+            customRow.appendChild(monthDayWrap);
+            customOptions.appendChild(customRow);
+            customOptions.appendChild(weekdays);
+            row.appendChild(frequencyWrap);
+            row.appendChild(summary);
+            section.appendChild(title);
+            section.appendChild(help);
+            section.appendChild(row);
+            section.appendChild(customOptions);
+            refreshVisibility();
+
+            return section;
+        }
+
+        function renderSubtaskRecurrenceControls(task, subtask, index) {
+            normalizeSubtaskDates(subtask);
+            ensureRecurrenceStartDate(subtask);
+
+            const controls = document.createElement('div');
+            controls.className = 'subtask-recurrence-controls';
+
+            const recurrenceLabel = document.createElement('span');
+            recurrenceLabel.className = 'subtask-recurrence-label';
+
+            const toggleButton = document.createElement('button');
+            toggleButton.type = 'button';
+            toggleButton.className = 'subtask-repeat-button';
+            toggleButton.setAttribute('aria-label', 'Répéter la sous-tâche');
+
+            const editor = document.createElement('div');
+            editor.className = 'subtask-recurrence-editor hidden';
+            const editorId = `subtask-recurrence-${task.id}-${index}`;
+            editor.id = editorId;
+            toggleButton.setAttribute('aria-controls', editorId);
+            toggleButton.setAttribute('aria-expanded', 'false');
+            editor.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            const inputRow = document.createElement('div');
+            inputRow.className = 'subtask-recurrence-inputs';
+
+            const frequencyWrap = document.createElement('div');
+            frequencyWrap.className = 'subtask-schedule-field';
+            const frequencyLabel = document.createElement('label');
+            frequencyLabel.textContent = 'Récurrence';
+            const frequencySelect = document.createElement('select');
+            const frequencyId = `subtask-recurrence-frequency-${task.id}-${index}`;
+            frequencySelect.id = frequencyId;
+            appendRecurrenceOptions(frequencySelect);
+            frequencySelect.value = subtask.recurrence.enabled ? subtask.recurrence.frequency : 'none';
+            frequencyLabel.htmlFor = frequencyId;
+
+            const intervalWrap = document.createElement('div');
+            intervalWrap.className = 'subtask-schedule-field';
+            const intervalLabel = document.createElement('label');
+            intervalLabel.textContent = 'Intervalle';
+            const intervalInput = document.createElement('input');
+            intervalInput.type = 'number';
+            intervalInput.min = '1';
+            intervalInput.step = '1';
+            intervalInput.value = String(Math.max(1, subtask.recurrence.interval || 1));
+            const intervalId = `subtask-recurrence-interval-${task.id}-${index}`;
+            intervalInput.id = intervalId;
+            intervalLabel.htmlFor = intervalId;
+
+            const unitWrap = document.createElement('div');
+            unitWrap.className = 'subtask-schedule-field';
+            const unitLabel = document.createElement('label');
+            unitLabel.textContent = 'Unité';
+            const unitSelect = document.createElement('select');
+            const unitId = `subtask-recurrence-unit-${task.id}-${index}`;
+            unitSelect.id = unitId;
+            appendRecurrenceUnitOptions(unitSelect);
+            unitSelect.value = getCustomRecurrenceUnit(subtask.recurrence);
+            unitLabel.htmlFor = unitId;
+
+            const okButton = document.createElement('button');
+            okButton.type = 'button';
+            okButton.textContent = 'OK';
+
+            const clearButton = document.createElement('button');
+            clearButton.type = 'button';
+            clearButton.textContent = 'Effacer';
+
+            function refreshSummary() {
+                const text = formatRecurrenceBadge(subtask.recurrence);
+                recurrenceLabel.textContent = text || '';
+                toggleButton.textContent = editor.classList.contains('hidden')
+                    ? (text ? 'Modifier' : 'Répéter')
+                    : 'Fermer';
+                intervalWrap.classList.toggle('hidden', frequencySelect.value !== 'custom');
+                unitWrap.classList.toggle('hidden', frequencySelect.value !== 'custom');
+            }
+
+            function saveSubtaskRecurrence() {
+                subtask.recurrence = buildRecurrenceFromSelection(subtask, {
+                    frequency: frequencySelect.value,
+                    interval: intervalInput.value,
+                    unit: unitSelect.value,
+                    daysOfWeek: [],
+                    dayOfMonth: '',
+                    previousNextDate: subtask.recurrence.nextDate
+                });
+                saveData();
+                renderTasks();
+            }
+
+            toggleButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                editor.classList.toggle('hidden');
+                toggleButton.setAttribute('aria-expanded', editor.classList.contains('hidden') ? 'false' : 'true');
+                refreshSummary();
+            });
+
+            frequencySelect.addEventListener('change', refreshSummary);
+            unitSelect.addEventListener('change', refreshSummary);
+            okButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                saveSubtaskRecurrence();
+            });
+            clearButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                subtask.recurrence = getDefaultRecurrence();
+                saveData();
+                renderTasks();
+            });
+
+            frequencyWrap.appendChild(frequencyLabel);
+            frequencyWrap.appendChild(frequencySelect);
+            intervalWrap.appendChild(intervalLabel);
+            intervalWrap.appendChild(intervalInput);
+            unitWrap.appendChild(unitLabel);
+            unitWrap.appendChild(unitSelect);
+            inputRow.appendChild(frequencyWrap);
+            inputRow.appendChild(intervalWrap);
+            inputRow.appendChild(unitWrap);
+            inputRow.appendChild(okButton);
+            inputRow.appendChild(clearButton);
+            editor.appendChild(inputRow);
+
+            controls.appendChild(recurrenceLabel);
+            controls.appendChild(toggleButton);
+            controls.appendChild(editor);
+            refreshSummary();
+
+            return controls;
+        }
+
         // Rendre les tâches
         function renderTasks() {
             const taskList = document.getElementById('task-list');
@@ -1571,6 +2928,8 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
             }
 
             filteredTasks.forEach(task => {
+                normalizeTaskDates(task);
+                ensureRecurrenceStartDate(task);
                 const taskDiv = document.createElement('div');
                 taskDiv.setAttribute('data-task-id', String(task.id));
                 const categoryColor = categories.find(cat => cat.name === task.category)?.color || '#ffffff';
@@ -1697,6 +3056,18 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                     dueDateSpan.textContent = '';
                 }
 
+                const scheduledDateSpan = document.createElement('span');
+                scheduledDateSpan.className = 'task-scheduled-date';
+                function updateTaskScheduledSummary() {
+                    const text = formatScheduledDateTime(task.scheduledDate, task.scheduledTime);
+                    scheduledDateSpan.textContent = text ? `Planifié : ${text}` : '';
+                }
+                updateTaskScheduledSummary();
+
+                const recurrenceBadge = document.createElement('span');
+                recurrenceBadge.className = 'task-recurrence-badge';
+                recurrenceBadge.textContent = formatRecurrenceBadge(task.recurrence);
+
                 // Afficher le nombre de sous-tâches
                 const subtasksCountSpan = document.createElement('span');
                 subtasksCountSpan.className = 'task-subtasks-count';
@@ -1719,6 +3090,8 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                 taskHeader.appendChild(titleSpan);
                 taskHeader.appendChild(categorySpan);
                 taskHeader.appendChild(dueDateSpan);
+                taskHeader.appendChild(scheduledDateSpan);
+                taskHeader.appendChild(recurrenceBadge);
                 taskHeader.appendChild(subtasksCountSpan);
                 taskHeader.appendChild(toggleButton);
 
@@ -1754,6 +3127,7 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                 subtaskList.className = 'subtasks';
                 task.subtasks = task.subtasks || [];
                 task.subtasks.forEach((subtask, index) => {
+                    normalizeSubtaskDates(subtask);
                     const li = document.createElement('li');
 
                     const subCheckbox = document.createElement('input');
@@ -1765,7 +3139,11 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                     subCheckbox.setAttribute('aria-label', `Sous-tâche : ${subtask.title || ''}`);
                     subCheckbox.addEventListener('change', function(e) {
                         e.stopPropagation();
-                        subtask.completed = subCheckbox.checked;
+                        if (subCheckbox.checked && subtask.recurrence && subtask.recurrence.enabled) {
+                            applySubtaskRecurrenceOnCompletion(subtask);
+                        } else {
+                            subtask.completed = subCheckbox.checked;
+                        }
 
                         // Évalue l'état "toutes les sous-tâches terminées"
                         const hasSubs = Array.isArray(task.subtasks) && task.subtasks.length > 0;
@@ -1793,6 +3171,9 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                         renderTasks();
                     });
 
+                    const subtaskContent = document.createElement('div');
+                    subtaskContent.className = 'subtask-content';
+
                     // Titre de la sous-tâche (édition en ligne)
                     const subSpan = document.createElement('span');
                     subSpan.className = 'subtask-title';
@@ -1813,7 +3194,7 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                         input.setAttribute('name', 'subtask-title');
                         input.setAttribute('aria-label', 'Titre de la sous-tâche');
                         input.setAttribute('autocomplete', 'off');
-                        li.replaceChild(input, subSpan);
+                        subtaskContent.replaceChild(input, subSpan);
                         input.focus();
 
                         input.addEventListener('blur', function() {
@@ -1829,8 +3210,12 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                         });
                     });
 
+                    subtaskContent.appendChild(subSpan);
+                    subtaskContent.appendChild(renderSubtaskScheduleControls(task, subtask, index));
+                    subtaskContent.appendChild(renderSubtaskRecurrenceControls(task, subtask, index));
+
                     li.appendChild(subCheckbox);
-                    li.appendChild(subSpan);
+                    li.appendChild(subtaskContent);
                     subtaskList.appendChild(li);
                 });
 
@@ -1853,7 +3238,10 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
     if (subtaskTitle) {
         task.subtasks.push({
             title: subtaskTitle,
-            completed: false
+            completed: false,
+            scheduledDate: '',
+            scheduledTime: '',
+            recurrence: getDefaultRecurrence()
         });
         task.celebratedSubtasks = false; // réarmer la célébration des sous-tâches
         saveData();
@@ -1950,6 +3338,70 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
 
                 taskDetails.appendChild(info);
 
+                const scheduledSection = document.createElement('div');
+                scheduledSection.className = 'scheduled-fields';
+
+                const scheduledTitle = document.createElement('h4');
+                scheduledTitle.textContent = 'Date certaine';
+                const scheduledHelp = document.createElement('p');
+                scheduledHelp.textContent = 'Moment planifié précis, distinct de la date d’échéance.';
+
+                const scheduledRow = document.createElement('div');
+                scheduledRow.className = 'scheduled-input-row';
+
+                const scheduledDateWrap = document.createElement('div');
+                const scheduledDateLabel = document.createElement('label');
+                scheduledDateLabel.textContent = 'Date certaine :';
+                const scheduledDateInput = document.createElement('input');
+                scheduledDateInput.type = 'date';
+                scheduledDateInput.value = task.scheduledDate || '';
+                const scheduledDateId = 'scheduled-date_' + task.id;
+                scheduledDateInput.id = scheduledDateId;
+                scheduledDateInput.name = 'scheduled-date';
+                scheduledDateInput.setAttribute('aria-label', 'Date certaine de la tâche');
+                scheduledDateLabel.htmlFor = scheduledDateId;
+                scheduledDateInput.addEventListener('change', function() {
+                    task.scheduledDate = isValidYmdDate(scheduledDateInput.value) ? scheduledDateInput.value : '';
+                    if (!task.scheduledDate) {
+                        task.scheduledTime = '';
+                        scheduledTimeInput.value = '';
+                    }
+                    updateTaskScheduledSummary();
+                    saveData();
+                });
+                scheduledDateWrap.appendChild(scheduledDateLabel);
+                scheduledDateWrap.appendChild(scheduledDateInput);
+
+                const scheduledTimeWrap = document.createElement('div');
+                const scheduledTimeLabel = document.createElement('label');
+                scheduledTimeLabel.textContent = 'Heure :';
+                const scheduledTimeInput = document.createElement('input');
+                scheduledTimeInput.type = 'time';
+                scheduledTimeInput.value = task.scheduledTime || '';
+                const scheduledTimeId = 'scheduled-time_' + task.id;
+                scheduledTimeInput.id = scheduledTimeId;
+                scheduledTimeInput.name = 'scheduled-time';
+                scheduledTimeInput.setAttribute('aria-label', 'Heure certaine de la tâche');
+                scheduledTimeLabel.htmlFor = scheduledTimeId;
+                scheduledTimeInput.addEventListener('change', function() {
+                    task.scheduledTime = isValidScheduledTime(scheduledTimeInput.value) ? scheduledTimeInput.value : '';
+                    updateTaskScheduledSummary();
+                    saveData();
+                });
+                scheduledTimeWrap.appendChild(scheduledTimeLabel);
+                scheduledTimeWrap.appendChild(scheduledTimeInput);
+
+                scheduledRow.appendChild(scheduledDateWrap);
+                scheduledRow.appendChild(scheduledTimeWrap);
+                scheduledSection.appendChild(scheduledTitle);
+                scheduledSection.appendChild(scheduledHelp);
+                scheduledSection.appendChild(scheduledRow);
+                info.appendChild(scheduledSection);
+                info.appendChild(renderTaskRecurrenceControls(task, updateTaskScheduledSummary));
+                if (subtasksLabel.parentNode === taskDetails) {
+                    taskDetails.insertBefore(info, subtasksLabel);
+                }
+
                 // Bouton de suppression de la tâche
                 const deleteTaskBtn = document.createElement('button');
                 deleteTaskBtn.textContent = 'Supprimer la Tâche';
@@ -1981,13 +3433,20 @@ function toggleTaskCompletion(taskId) {
     if (!t) return;
 
     const wasCompleted = !!t.completed;
-    t.completed = !wasCompleted;
-    t.completionDate = t.completed ? new Date().toISOString() : null;
-
-    // Si on décoche une tâche, on réarme la célébration projet
-    if (!t.completed) {
+    normalizeTaskDates(t);
+    if (!wasCompleted && t.recurrence.enabled) {
+        applyTaskRecurrenceOnCompletion(t);
         projectCelebrated = false;
         projectCompletedAt = null;
+    } else {
+        t.completed = !wasCompleted;
+        t.completionDate = t.completed ? new Date().toISOString() : null;
+
+        // Si on décoche une tâche, on réarme la célébration projet
+        if (!t.completed) {
+            projectCelebrated = false;
+            projectCompletedAt = null;
+        }
     }
 
     saveData();
@@ -2067,8 +3526,20 @@ function toggleTaskCompletion(taskId) {
         function toggleTaskCompletion(taskId) {
   const task = tasks.find(t => t.id === taskId);
   if (task) {
-    task.completed = !task.completed;
-    task.completionDate = task.completed ? new Date().toISOString() : null;
+    const wasCompleted = !!task.completed;
+    normalizeTaskDates(task);
+    if (!wasCompleted && task.recurrence.enabled) {
+        applyTaskRecurrenceOnCompletion(task);
+        projectCelebrated = false;
+        projectCompletedAt = null;
+    } else {
+        task.completed = !wasCompleted;
+        task.completionDate = task.completed ? new Date().toISOString() : null;
+        if (!task.completed) {
+            projectCelebrated = false;
+            projectCompletedAt = null;
+        }
+    }
     saveData();
     renderTasks();
     checkProjectCompletion();   // ← ajouté
@@ -2206,7 +3677,7 @@ function toggleTaskCompletion(taskId) {
                         break;
                     case 'reset':
                         // Restaurer les données précédentes
-                        tasks = lastAction.tasks;
+                        tasks = normalizeTasksDates(lastAction.tasks);
                         categories = lastAction.categories;
                         sectionStates = lastAction.sectionStates;
                         sortCriteria = [];
@@ -2393,7 +3864,7 @@ function toggleTaskCompletion(taskId) {
         document.getElementById('sync-box').addEventListener('input', function() {
             try {
                 const data = JSON.parse(this.value);
-                tasks = data.tasks || [];
+                tasks = normalizeTasksDates(data.tasks || []);
                 categories = data.categories || [];
                 sectionStates = data.sectionStates || {};
                 sortCriteria = data.sortCriteria || [];
@@ -2477,6 +3948,7 @@ function toggleTaskCompletion(taskId) {
             renderTasks();
             setupCollapsibleSections();
             applySectionStates();
+            bindDetailedTaskModalControls();
             disableUndoButton();
             updateSyncBox();
             // Initialise Firebase seulement si une clé est disponible, sinon affiche le modal
