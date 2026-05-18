@@ -558,8 +558,7 @@
         .calendar-item.todo,
         .calendar-item-todo-scheduled,
         .calendar-item-subtask-scheduled,
-        .calendar-item-todo-recurring,
-        .calendar-item-subtask-recurring {
+        .calendar-item-todo-recurring {
             background: #2d2417;
             border-color: #76562b;
             cursor: pointer;
@@ -578,13 +577,6 @@
         .calendar-item-todo-recurring {
             background: #1e2b24;
             border-style: dashed;
-        }
-
-        .calendar-item-subtask-recurring {
-            background: #18231d;
-            border-style: dashed;
-            font-size: 0.76em;
-            opacity: 0.9;
         }
 
         .calendar-item.todo.todo-period {
@@ -699,6 +691,69 @@
             color: #cccccc;
             margin-top: 3px;
             white-space: pre-wrap;
+        }
+
+        .calendar-day-agenda .calendar-item.has-subtask-progress,
+        .day-period-item.has-subtask-progress {
+            white-space: normal;
+        }
+
+        .calendar-subtask-progress {
+            display: block;
+            margin-top: 5px;
+            max-width: 260px;
+        }
+
+        .calendar-subtask-progress-text {
+            color: #c7d6c2;
+            font-size: 0.82em;
+            line-height: 1.2;
+            margin-bottom: 3px;
+        }
+
+        .calendar-subtask-progress-bar {
+            height: 5px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .calendar-subtask-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: #8fcf8f;
+            border-radius: inherit;
+        }
+
+        .calendar-subtask-progress-mini {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 1px 4px;
+            border: 1px solid rgba(143, 207, 143, 0.45);
+            border-radius: 999px;
+            color: #c7d6c2;
+            font-size: 0.78em;
+            line-height: 1.2;
+            vertical-align: middle;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .todo-period-bar .calendar-subtask-progress-mini {
+            float: right;
+            margin-left: 8px;
+            background: rgba(0, 0, 0, 0.18);
+        }
+
+        .completed .calendar-subtask-progress,
+        .completed .calendar-subtask-progress-mini {
+            opacity: 0.72;
+        }
+
+        .calendar-item.completed.has-subtask-progress,
+        .day-period-item.completed.has-subtask-progress,
+        .todo-period-bar.completed.has-subtask-progress {
+            text-decoration: none;
         }
 
         .delete-event-btn {
@@ -1772,6 +1827,63 @@
             return text || 'récurrence active';
         }
 
+        function getSubtaskProgress(task) {
+            const subtasks = Array.isArray(task && task.subtasks)
+                ? task.subtasks.filter(Boolean)
+                : [];
+            const total = subtasks.length;
+            const completed = subtasks.filter(function (subtask) {
+                return !!(subtask && subtask.completed);
+            }).length;
+            const ratio = total ? completed / total : 0;
+            return {
+                total,
+                completed,
+                ratio,
+                label: total ? `${completed}/${total}` : ''
+            };
+        }
+
+        function createSubtaskProgressElement(taskOrItem, options) {
+            options = options || {};
+            const progress = taskOrItem && taskOrItem.subtaskProgress
+                ? taskOrItem.subtaskProgress
+                : getSubtaskProgress(taskOrItem);
+            if (!progress.total) return null;
+
+            const percent = Math.max(0, Math.min(100, Math.round(progress.ratio * 100)));
+            const ariaLabel = `Progression des sous-tâches : ${progress.completed} sur ${progress.total} terminées`;
+
+            if (options.compact) {
+                const mini = document.createElement('span');
+                mini.className = 'calendar-subtask-progress-mini';
+                mini.textContent = progress.label;
+                mini.setAttribute('aria-label', ariaLabel);
+                mini.title = ariaLabel;
+                return mini;
+            }
+
+            const container = document.createElement('div');
+            container.className = 'calendar-subtask-progress';
+            container.setAttribute('aria-label', ariaLabel);
+
+            const text = document.createElement('div');
+            text.className = 'calendar-subtask-progress-text';
+            text.textContent = `Sous-tâches ${progress.label}`;
+            container.appendChild(text);
+
+            const bar = document.createElement('div');
+            bar.className = 'calendar-subtask-progress-bar';
+
+            const fill = document.createElement('div');
+            fill.className = 'calendar-subtask-progress-fill';
+            fill.style.width = `${percent}%`;
+            bar.appendChild(fill);
+            container.appendChild(bar);
+
+            return container;
+        }
+
         function calendarExtractTodoData(docData) {
             const state = calendarExtractTodoState(docData);
             const tasks = state && Array.isArray(state.tasks) ? state.tasks : [];
@@ -1799,11 +1911,7 @@
                 if (recurring) result.todoRecurringItems.push(recurring);
 
                 extractSubtaskScheduledItems(task, category).forEach(function (item) {
-                    const recurrenceDate = calendarSubtaskRecurrenceDate(task, item.subtaskIndex);
-                    if (!recurrenceDate || recurrenceDate !== item.date) result.subtaskScheduledItems.push(item);
-                });
-                extractSubtaskRecurringItems(task, category).forEach(function (item) {
-                    result.subtaskRecurringItems.push(item);
+                    result.subtaskScheduledItems.push(item);
                 });
             });
 
@@ -1826,6 +1934,7 @@
                 time: '',
                 completed: !!(task && task.completed),
                 recurrence: calendarNormalizeRecurrence(task && task.recurrence),
+                subtaskProgress: getSubtaskProgress(task),
                 dueDate: ''
             };
         }
@@ -1852,7 +1961,7 @@
                     date,
                     time: calendarNormalizeTimeValue(subtask && subtask.scheduledTime),
                     completed: !!subtask.completed,
-                    recurrence: calendarNormalizeRecurrence(subtask && subtask.recurrence)
+                    recurrence: calendarDefaultRecurrence()
                 });
             }).filter(Boolean);
         }
@@ -1866,32 +1975,6 @@
                 time: calendarNormalizeTimeValue(task && task.scheduledTime),
                 recurrence
             });
-        }
-
-        function extractSubtaskRecurringItems(task, category) {
-            const subtasks = Array.isArray(task && task.subtasks) ? task.subtasks : [];
-            return subtasks.map(function (subtask, index) {
-                const recurrence = calendarNormalizeRecurrence(subtask && subtask.recurrence);
-                const date = recurrence.enabled ? (recurrence.nextDate || calendarNormalizeDateValue(subtask && subtask.scheduledDate)) : '';
-                if (!date) return null;
-                return Object.assign(calendarBaseTodoItem(task, category, 'subtask-recurring'), {
-                    id: `${task.id}:subtask:${index}:recurring`,
-                    subtaskIndex: index,
-                    title: subtask.title || 'Sous-tâche sans titre',
-                    parentTitle: task.title || 'Tâche sans titre',
-                    date,
-                    time: calendarNormalizeTimeValue(subtask && subtask.scheduledTime),
-                    completed: !!subtask.completed,
-                    recurrence
-                });
-            }).filter(Boolean);
-        }
-
-        function calendarSubtaskRecurrenceDate(task, index) {
-            const subtasks = Array.isArray(task && task.subtasks) ? task.subtasks : [];
-            const subtask = subtasks[index];
-            const recurrence = calendarNormalizeRecurrence(subtask && subtask.recurrence);
-            return recurrence.enabled ? (recurrence.nextDate || calendarNormalizeDateValue(subtask && subtask.scheduledDate)) : '';
         }
 
         function extractTaskDeadlineItem(task, category) {
@@ -2068,7 +2151,7 @@
             if (typeFilter === 'all') return true;
             if (typeFilter === 'scheduled-task') return item.kind === 'task-scheduled';
             if (typeFilter === 'scheduled-subtask') return item.kind === 'subtask-scheduled';
-            if (typeFilter === 'recurring') return item.kind === 'task-recurring' || item.kind === 'subtask-recurring';
+            if (typeFilter === 'recurring') return item.kind === 'task-recurring';
             if (typeFilter === 'deadline') return item.kind === 'task-deadline';
             return true;
         }
@@ -2160,7 +2243,6 @@
             if (item.kind === 'task-scheduled') return 1;
             if (item.kind === 'task-recurring') return 2;
             if (item.kind === 'subtask-scheduled') return 3;
-            if (item.kind === 'subtask-recurring') return 4;
             return 5;
         }
 
@@ -2417,7 +2499,7 @@
                 },
                 {
                     title: 'Récurrences',
-                    items: dayItems.filter(function (item) { return item.kind === 'task-recurring' || item.kind === 'subtask-recurring'; })
+                    items: dayItems.filter(function (item) { return item.kind === 'task-recurring'; })
                 }
             ].forEach(function (group) {
                 agenda.appendChild(calendarCreateDayAgendaSection(group.title, group.items));
@@ -2485,7 +2567,19 @@
             bar.style.backgroundColor = calendarHexToRgba(color, 0.28);
             bar.style.borderColor = calendarHexToRgba(color, 0.62);
             bar.style.borderLeftColor = color;
-            bar.textContent = period.title || 'Tâche Todo';
+
+            const title = document.createElement('span');
+            title.textContent = period.title || 'Tâche Todo';
+            bar.appendChild(title);
+
+            if (calendarItemCanShowSubtaskProgress(period)) {
+                const progress = createSubtaskProgressElement(period, { compact: true });
+                if (progress) {
+                    bar.classList.add('has-subtask-progress');
+                    bar.appendChild(progress);
+                }
+            }
+
             bar.title = calendarTodoPeriodTooltip(period);
             calendarMakeTodoElementInteractive(bar, period.taskId || period.id);
             return bar;
@@ -2537,6 +2631,14 @@
                     : `Échéance le ${calendarYmdToDisplayDate(period.dueDate)}`;
                 item.appendChild(meta);
 
+                if (calendarItemCanShowSubtaskProgress(period)) {
+                    const progress = createSubtaskProgressElement(period, { compact: false });
+                    if (progress) {
+                        item.classList.add('has-subtask-progress');
+                        item.appendChild(progress);
+                    }
+                }
+
                 list.appendChild(item);
             });
             section.appendChild(list);
@@ -2545,7 +2647,13 @@
 
         function calendarTodoPeriodTooltip(period) {
             const category = period.category || 'Général';
-            return `${period.title || 'Tâche Todo'} - ${category} - échéance le ${calendarYmdToDisplayDate(period.dueDate)}`;
+            const parts = [
+                `${period.title || 'Tâche Todo'} - ${category} - échéance le ${calendarYmdToDisplayDate(period.dueDate)}`
+            ];
+            if (period.subtaskProgress && period.subtaskProgress.total) {
+                parts.push(`Sous-tâches : ${period.subtaskProgress.label}`);
+            }
+            return parts.join('\n');
         }
 
         function calendarHexToRgba(color, alpha) {
@@ -2854,7 +2962,6 @@
                 const bits = [];
                 const scheduledText = formatScheduledDateTime(subtask.scheduledDate, subtask.scheduledTime);
                 if (scheduledText) bits.push(`Planifiée : ${scheduledText}`);
-                if (subtask.recurrence && subtask.recurrence.enabled) bits.push(`Récurrence : ${calendarFormatRecurrenceSummary(subtask.recurrence)}`);
                 meta.textContent = bits.join(' | ');
                 if (bits.length) row.appendChild(meta);
                 container.appendChild(row);
@@ -3032,6 +3139,12 @@
             calendarRender();
         }
 
+        function calendarItemCanShowSubtaskProgress(item) {
+            if (!item || item.source !== 'todo') return false;
+            if (['task-scheduled', 'task-recurring', 'task-deadline'].indexOf(item.kind) < 0) return false;
+            return !!(item.subtaskProgress && item.subtaskProgress.total);
+        }
+
         function calendarCreateItemElement(item) {
             const el = document.createElement('div');
             el.className = item.source === 'todo'
@@ -3069,6 +3182,14 @@
             title.textContent = item.completed ? `Terminé: ${displayTitle}` : displayTitle;
             el.appendChild(title);
 
+            if (calendarItemCanShowSubtaskProgress(item)) {
+                const progress = createSubtaskProgressElement(item, { compact: calendarView.mode !== 'day' });
+                if (progress) {
+                    el.classList.add('has-subtask-progress');
+                    el.appendChild(progress);
+                }
+            }
+
             if (item.notes) {
                 const notes = document.createElement('span');
                 notes.className = 'calendar-item-notes';
@@ -3095,7 +3216,6 @@
             if (kind === 'task-scheduled') return 'calendar-item-todo-scheduled';
             if (kind === 'subtask-scheduled') return 'calendar-item-subtask-scheduled';
             if (kind === 'task-recurring') return 'calendar-item-todo-recurring';
-            if (kind === 'subtask-recurring') return 'calendar-item-subtask-recurring';
             if (kind === 'task-deadline') return 'calendar-item-todo-deadline';
             return 'calendar-item-todo-scheduled';
         }
@@ -3104,7 +3224,6 @@
             if (!item) return '';
             if (item.kind === 'subtask-scheduled') return `↳ ${item.title || 'Sous-tâche'}`;
             if (item.kind === 'task-recurring') return `🔁 ${item.title || 'Tâche'}`;
-            if (item.kind === 'subtask-recurring') return `↳ 🔁 ${item.title || 'Sous-tâche'}`;
             if (item.kind === 'task-deadline') return `Échéance: ${item.title || 'Tâche'}`;
             return item.title || 'Tâche';
         }
@@ -3122,6 +3241,7 @@
             if (item.date) lines.push(`Date : ${calendarYmdToDisplayDate(item.date)}${item.time ? ' ' + item.time : ''}`);
             if (item.dueDate) lines.push(`Échéance : ${calendarYmdToDisplayDate(item.dueDate)}`);
             if (item.recurrence && item.recurrence.enabled) lines.push(`Récurrence : ${calendarFormatRecurrenceSummary(item.recurrence)}`);
+            if (item.subtaskProgress && item.subtaskProgress.total) lines.push(`Sous-tâches : ${item.subtaskProgress.label}`);
             return lines.join('\n');
         }
 

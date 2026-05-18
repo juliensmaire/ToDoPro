@@ -321,46 +321,27 @@
             align-items: center;
             grid-column: 1 / -1;
         }
-        .subtask-recurrence-controls {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 6px;
-            align-items: center;
-            grid-column: 1 / -1;
-        }
-        .subtask-scheduled-label,
-        .subtask-recurrence-label {
+        .subtask-scheduled-label {
             color: #a8d6e8;
             font-size: 0.85em;
             min-height: 1.2em;
         }
-        .subtask-recurrence-label {
-            color: #bff3cf;
-        }
-        .subtask-plan-button,
-        .subtask-repeat-button {
+        .subtask-plan-button {
             padding: 4px 8px;
             font-size: 0.82em;
             white-space: nowrap;
         }
-        .subtask-schedule-editor,
-        .subtask-recurrence-editor {
+        .subtask-schedule-editor {
             grid-column: 1 / -1;
             border: 1px solid #333333;
             border-radius: 6px;
             background-color: #191919;
             padding: 8px;
         }
-        .subtask-recurrence-editor {
-            border-color: #334133;
-            background-color: #171d17;
-        }
-        .subtask-schedule-editor.hidden,
-        .subtask-recurrence-editor.hidden {
+        .subtask-schedule-editor.hidden {
             display: none;
         }
-        .subtask-schedule-inputs,
-        .subtask-recurrence-inputs {
+        .subtask-schedule-inputs {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 110px auto auto;
             gap: 8px;
@@ -391,7 +372,6 @@
             .recurrence-custom-row,
             .subtask-content,
             .subtask-schedule-inputs,
-            .subtask-recurrence-inputs,
             .detailed-task-grid,
             .detailed-subtask-add {
                 grid-template-columns: 1fr;
@@ -1311,9 +1291,6 @@ function normalizeSubtaskDates(subtask) {
     subtask.scheduledDate = isValidYmdDate(subtask.scheduledDate) ? subtask.scheduledDate : '';
     subtask.scheduledTime = subtask.scheduledDate && isValidScheduledTime(subtask.scheduledTime) ? subtask.scheduledTime : '';
     subtask.recurrence = normalizeRecurrence(subtask.recurrence);
-    if (subtask.recurrence.enabled && !subtask.scheduledDate && subtask.recurrence.nextDate) {
-        subtask.scheduledDate = subtask.recurrence.nextDate;
-    }
     return subtask;
 }
 
@@ -1879,12 +1856,31 @@ function reactivateRecurringItem(item, todayYmd) {
 
 function reactivateRecurringTask(task, todayYmd) {
     normalizeTaskDates(task);
-    return reactivateRecurringItem(task, todayYmd);
+    const reactivated = reactivateRecurringItem(task, todayYmd);
+    if (reactivated) {
+        resetSubtasksForRecurringTask(task);
+        if (Object.prototype.hasOwnProperty.call(task, 'celebratedSubtasks')) {
+            task.celebratedSubtasks = false;
+        }
+    }
+    return reactivated;
 }
 
-function reactivateRecurringSubtask(subtask, todayYmd) {
-    normalizeSubtaskDates(subtask);
-    return reactivateRecurringItem(subtask, todayYmd);
+function resetSubtasksForRecurringTask(task) {
+    if (!task || !Array.isArray(task.subtasks)) return false;
+    let changed = false;
+    task.subtasks.forEach(function(subtask) {
+        normalizeSubtaskDates(subtask);
+        if (subtask.completed) {
+            subtask.completed = false;
+            changed = true;
+        }
+        if (Object.prototype.hasOwnProperty.call(subtask, 'completionDate') && subtask.completionDate !== null) {
+            subtask.completionDate = null;
+            changed = true;
+        }
+    });
+    return changed;
 }
 
 function refreshRecurringItems(options) {
@@ -1908,16 +1904,6 @@ function refreshRecurringItems(options) {
         task.subtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
         task.subtasks.forEach(function(subtask) {
             normalizeSubtaskDates(subtask);
-            const subtaskStartBefore = recurringStartState(subtask);
-            ensureRecurrenceStartDate(subtask);
-            if (recurringStartState(subtask) !== subtaskStartBefore) changed = true;
-
-            if (shouldReactivateRecurringItem(subtask, today) && reactivateRecurringSubtask(subtask, today)) {
-                changed = true;
-                if (Object.prototype.hasOwnProperty.call(task, 'celebratedSubtasks')) {
-                    task.celebratedSubtasks = false;
-                }
-            }
         });
     });
 
@@ -1938,18 +1924,6 @@ function applyTaskRecurrenceOnCompletion(task) {
     task.recurrence.nextDate = nextDate;
     task.completed = true;
     task.completionDate = new Date().toISOString();
-    return true;
-}
-
-function applySubtaskRecurrenceOnCompletion(subtask) {
-    normalizeSubtaskDates(subtask);
-    ensureRecurrenceStartDate(subtask);
-    if (!subtask.recurrence.enabled) return false;
-    const today = getTodayYmd();
-    const nextDate = getNextRecurrenceDateAfter(subtask.recurrence, getCompletionRecurrenceBaseDate(subtask, today));
-    subtask.recurrence.lastCompletedDate = today;
-    subtask.recurrence.nextDate = nextDate;
-    subtask.completed = true;
     return true;
 }
 
@@ -3474,7 +3448,7 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
             title.textContent = 'Récurrence';
 
             const help = document.createElement('p');
-            help.textContent = 'Règle optionnelle pour une tâche qui revient automatiquement, distincte de l’échéance et de la date certaine.';
+            help.textContent = 'Règle optionnelle pour une tâche qui revient automatiquement, distincte de l’échéance et de la date certaine. Les sous-tâches seront réinitialisées à chaque occurrence.';
 
             const row = document.createElement('div');
             row.className = 'recurrence-input-row';
@@ -3590,144 +3564,6 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
             refreshVisibility();
 
             return section;
-        }
-
-        function renderSubtaskRecurrenceControls(task, subtask, index) {
-            normalizeSubtaskDates(subtask);
-            ensureRecurrenceStartDate(subtask);
-
-            const controls = document.createElement('div');
-            controls.className = 'subtask-recurrence-controls';
-
-            const recurrenceLabel = document.createElement('span');
-            recurrenceLabel.className = 'subtask-recurrence-label';
-
-            const toggleButton = document.createElement('button');
-            toggleButton.type = 'button';
-            toggleButton.className = 'subtask-repeat-button';
-            toggleButton.setAttribute('aria-label', 'Répéter la sous-tâche');
-
-            const editor = document.createElement('div');
-            editor.className = 'subtask-recurrence-editor hidden';
-            const editorId = `subtask-recurrence-${task.id}-${index}`;
-            editor.id = editorId;
-            toggleButton.setAttribute('aria-controls', editorId);
-            toggleButton.setAttribute('aria-expanded', 'false');
-            editor.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
-
-            const inputRow = document.createElement('div');
-            inputRow.className = 'subtask-recurrence-inputs';
-
-            const frequencyWrap = document.createElement('div');
-            frequencyWrap.className = 'subtask-schedule-field';
-            const frequencyLabel = document.createElement('label');
-            frequencyLabel.textContent = 'Récurrence';
-            const frequencySelect = document.createElement('select');
-            const frequencyId = `subtask-recurrence-frequency-${task.id}-${index}`;
-            frequencySelect.id = frequencyId;
-            appendRecurrenceOptions(frequencySelect);
-            frequencySelect.value = subtask.recurrence.enabled ? subtask.recurrence.frequency : 'none';
-            frequencyLabel.htmlFor = frequencyId;
-
-            const intervalWrap = document.createElement('div');
-            intervalWrap.className = 'subtask-schedule-field';
-            const intervalLabel = document.createElement('label');
-            intervalLabel.textContent = 'Intervalle';
-            const intervalInput = document.createElement('input');
-            intervalInput.type = 'number';
-            intervalInput.min = '1';
-            intervalInput.step = '1';
-            intervalInput.value = String(Math.max(1, subtask.recurrence.interval || 1));
-            const intervalId = `subtask-recurrence-interval-${task.id}-${index}`;
-            intervalInput.id = intervalId;
-            intervalLabel.htmlFor = intervalId;
-
-            const unitWrap = document.createElement('div');
-            unitWrap.className = 'subtask-schedule-field';
-            const unitLabel = document.createElement('label');
-            unitLabel.textContent = 'Unité';
-            const unitSelect = document.createElement('select');
-            const unitId = `subtask-recurrence-unit-${task.id}-${index}`;
-            unitSelect.id = unitId;
-            appendRecurrenceUnitOptions(unitSelect);
-            unitSelect.value = getCustomRecurrenceUnit(subtask.recurrence);
-            unitLabel.htmlFor = unitId;
-
-            const okButton = document.createElement('button');
-            okButton.type = 'button';
-            okButton.textContent = 'OK';
-
-            const clearButton = document.createElement('button');
-            clearButton.type = 'button';
-            clearButton.textContent = 'Effacer';
-
-            function refreshSummary() {
-                const text = formatRecurrenceBadge(subtask.recurrence);
-                recurrenceLabel.textContent = text || '';
-                toggleButton.textContent = editor.classList.contains('hidden')
-                    ? (text ? 'Modifier' : 'Répéter')
-                    : 'Fermer';
-                intervalWrap.classList.toggle('hidden', frequencySelect.value !== 'custom');
-                unitWrap.classList.toggle('hidden', frequencySelect.value !== 'custom');
-            }
-
-            function saveSubtaskRecurrence() {
-                subtask.recurrence = buildRecurrenceFromSelection(subtask, {
-                    frequency: frequencySelect.value,
-                    interval: intervalInput.value,
-                    unit: unitSelect.value,
-                    daysOfWeek: [],
-                    dayOfMonth: '',
-                    previousNextDate: subtask.recurrence.nextDate
-                });
-                saveData();
-                renderTasks();
-            }
-
-            toggleButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                editor.classList.toggle('hidden');
-                toggleButton.setAttribute('aria-expanded', editor.classList.contains('hidden') ? 'false' : 'true');
-                refreshSummary();
-            });
-
-            frequencySelect.addEventListener('change', refreshSummary);
-            unitSelect.addEventListener('change', refreshSummary);
-            okButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                saveSubtaskRecurrence();
-            });
-            clearButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                subtask.recurrence = getDefaultRecurrence();
-                saveData();
-                renderTasks();
-            });
-
-            frequencyWrap.appendChild(frequencyLabel);
-            frequencyWrap.appendChild(frequencySelect);
-            intervalWrap.appendChild(intervalLabel);
-            intervalWrap.appendChild(intervalInput);
-            unitWrap.appendChild(unitLabel);
-            unitWrap.appendChild(unitSelect);
-            inputRow.appendChild(frequencyWrap);
-            inputRow.appendChild(intervalWrap);
-            inputRow.appendChild(unitWrap);
-            inputRow.appendChild(okButton);
-            inputRow.appendChild(clearButton);
-            editor.appendChild(inputRow);
-
-            controls.appendChild(recurrenceLabel);
-            controls.appendChild(toggleButton);
-            controls.appendChild(editor);
-            refreshSummary();
-
-            return controls;
         }
 
         // Rendre les tâches
@@ -3970,10 +3806,9 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
                     subCheckbox.setAttribute('aria-label', `Sous-tâche : ${subtask.title || ''}`);
                     subCheckbox.addEventListener('change', function(e) {
                         e.stopPropagation();
-                        if (subCheckbox.checked && subtask.recurrence && subtask.recurrence.enabled) {
-                            applySubtaskRecurrenceOnCompletion(subtask);
-                        } else {
-                            subtask.completed = subCheckbox.checked;
+                        subtask.completed = subCheckbox.checked;
+                        if (!subtask.completed && Object.prototype.hasOwnProperty.call(subtask, 'completionDate')) {
+                            subtask.completionDate = null;
                         }
 
                         // Évalue l'état "toutes les sous-tâches terminées"
@@ -4043,7 +3878,6 @@ document.getElementById('add-task-btn').addEventListener('click', function() {
 
                     subtaskContent.appendChild(subSpan);
                     subtaskContent.appendChild(renderSubtaskScheduleControls(task, subtask, index));
-                    subtaskContent.appendChild(renderSubtaskRecurrenceControls(task, subtask, index));
 
                     li.appendChild(subCheckbox);
                     li.appendChild(subtaskContent);
