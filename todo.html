@@ -1035,6 +1035,7 @@ let calendarEvents = [];            // champ optionnel préservé si présent da
 let hasCalendarEventsField = false;
 let projectExtraState = {};         // champs projet inconnus conservés au lieu d'être perdus à l'import
 let detailedTaskDraftSubtasks = [];
+let todayYmdOverrideForTests = '';
 
 // === Auto-save vers Firebase (avec anti-spam) ===
 let autosaveTimer = null;
@@ -1704,7 +1705,23 @@ function localDateToYmd(date) {
 }
 
 function getTodayYmd() {
+    const windowOverride = typeof window !== 'undefined' ? String(window.__TODOPRO_TODAY_YMD || '') : '';
+    const override = todayYmdOverrideForTests || windowOverride;
+    if (isValidYmdDate(override)) return override;
     return localDateToYmd(new Date());
+}
+
+function setTodayYmdOverrideForTests(value) {
+    const normalized = String(value || '').trim();
+    todayYmdOverrideForTests = isValidYmdDate(normalized) ? normalized : '';
+    if (typeof window !== 'undefined') {
+        if (todayYmdOverrideForTests) {
+            window.__TODOPRO_TODAY_YMD = todayYmdOverrideForTests;
+        } else {
+            delete window.__TODOPRO_TODAY_YMD;
+        }
+    }
+    return getTodayYmd();
 }
 
 function addDaysYmd(value, days) {
@@ -1784,28 +1801,155 @@ function ensureRecurrenceStartDate(item) {
     }
 }
 
+function getNextRecurrenceDateAfter(recurrence, fromYmd) {
+    const normalized = normalizeRecurrence(recurrence);
+    const fromDate = isValidYmdDate(fromYmd) ? fromYmd : getTodayYmd();
+    let nextDate = calculateNextRecurrenceDate(normalized, fromDate);
+    let guard = 0;
+
+    while (nextDate && nextDate <= fromDate && guard < 5000) {
+        nextDate = calculateNextRecurrenceDate(normalized, nextDate);
+        guard += 1;
+    }
+
+    return nextDate || '';
+}
+
+function getLatestRecurrenceDateOnOrBefore(recurrence, todayYmd) {
+    const normalized = normalizeRecurrence(recurrence);
+    const today = isValidYmdDate(todayYmd) ? todayYmd : getTodayYmd();
+    let occurrenceDate = normalized.nextDate;
+    let guard = 0;
+
+    if (!normalized.enabled || !occurrenceDate || occurrenceDate > today) return '';
+
+    while (guard < 5000) {
+        const nextDate = calculateNextRecurrenceDate(normalized, occurrenceDate);
+        if (!nextDate || nextDate > today) break;
+        occurrenceDate = nextDate;
+        guard += 1;
+    }
+
+    return occurrenceDate;
+}
+
+function getCompletionRecurrenceBaseDate(item, todayYmd) {
+    const today = isValidYmdDate(todayYmd) ? todayYmd : getTodayYmd();
+    const nextDate = item && item.recurrence && isValidYmdDate(item.recurrence.nextDate)
+        ? item.recurrence.nextDate
+        : '';
+    return nextDate && nextDate > today ? nextDate : today;
+}
+
+function recurringStartState(item) {
+    return JSON.stringify({
+        scheduledDate: item && item.scheduledDate ? item.scheduledDate : '',
+        recurrence: item && item.recurrence ? item.recurrence : null
+    });
+}
+
+function shouldReactivateRecurringItem(item, todayYmd) {
+    if (!item || !item.completed) return false;
+    const recurrence = normalizeRecurrence(item.recurrence);
+    const today = isValidYmdDate(todayYmd) ? todayYmd : getTodayYmd();
+    return !!(recurrence.enabled && recurrence.nextDate && recurrence.nextDate <= today);
+}
+
+function reactivateRecurringItem(item, todayYmd) {
+    const today = isValidYmdDate(todayYmd) ? todayYmd : getTodayYmd();
+    item.recurrence = normalizeRecurrence(item.recurrence);
+    if (!item.recurrence.enabled) return false;
+
+    const occurrenceDate = getLatestRecurrenceDateOnOrBefore(item.recurrence, today) || item.recurrence.nextDate;
+    const nextDate = getNextRecurrenceDateAfter(item.recurrence, today);
+
+    item.completed = false;
+    if (Object.prototype.hasOwnProperty.call(item, 'completionDate')) {
+        item.completionDate = null;
+    }
+    if (Object.prototype.hasOwnProperty.call(item, 'scheduledDate') && occurrenceDate) {
+        item.scheduledDate = occurrenceDate;
+    }
+    if (nextDate) {
+        item.recurrence.nextDate = nextDate;
+    }
+
+    return true;
+}
+
+function reactivateRecurringTask(task, todayYmd) {
+    normalizeTaskDates(task);
+    return reactivateRecurringItem(task, todayYmd);
+}
+
+function reactivateRecurringSubtask(subtask, todayYmd) {
+    normalizeSubtaskDates(subtask);
+    return reactivateRecurringItem(subtask, todayYmd);
+}
+
+function refreshRecurringItems(options) {
+    options = options || {};
+    const today = getTodayYmd();
+    let changed = false;
+
+    tasks = normalizeTasksDates(tasks);
+
+    tasks.forEach(function(task) {
+        const taskStartBefore = recurringStartState(task);
+        ensureRecurrenceStartDate(task);
+        if (recurringStartState(task) !== taskStartBefore) changed = true;
+
+        if (shouldReactivateRecurringItem(task, today) && reactivateRecurringTask(task, today)) {
+            changed = true;
+            projectCelebrated = false;
+            projectCompletedAt = null;
+        }
+
+        task.subtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
+        task.subtasks.forEach(function(subtask) {
+            normalizeSubtaskDates(subtask);
+            const subtaskStartBefore = recurringStartState(subtask);
+            ensureRecurrenceStartDate(subtask);
+            if (recurringStartState(subtask) !== subtaskStartBefore) changed = true;
+
+            if (shouldReactivateRecurringItem(subtask, today) && reactivateRecurringSubtask(subtask, today)) {
+                changed = true;
+                if (Object.prototype.hasOwnProperty.call(task, 'celebratedSubtasks')) {
+                    task.celebratedSubtasks = false;
+                }
+            }
+        });
+    });
+
+    if (changed && options.save !== false) {
+        saveData();
+    }
+
+    return changed;
+}
+
 function applyTaskRecurrenceOnCompletion(task) {
     normalizeTaskDates(task);
+    ensureRecurrenceStartDate(task);
     if (!task.recurrence.enabled) return false;
     const today = getTodayYmd();
-    const nextDate = calculateNextRecurrenceDate(task.recurrence, today);
+    const nextDate = getNextRecurrenceDateAfter(task.recurrence, getCompletionRecurrenceBaseDate(task, today));
     task.recurrence.lastCompletedDate = today;
     task.recurrence.nextDate = nextDate;
-    task.scheduledDate = nextDate || task.scheduledDate;
-    task.completed = false;
-    task.completionDate = null;
+    task.completed = true;
+    task.completionDate = new Date().toISOString();
     return true;
 }
 
 function applySubtaskRecurrenceOnCompletion(subtask) {
     normalizeSubtaskDates(subtask);
+    ensureRecurrenceStartDate(subtask);
     if (!subtask.recurrence.enabled) return false;
     const today = getTodayYmd();
-    const nextDate = calculateNextRecurrenceDate(subtask.recurrence, today);
+    const nextDate = getNextRecurrenceDateAfter(subtask.recurrence, getCompletionRecurrenceBaseDate(subtask, today));
     subtask.recurrence.lastCompletedDate = today;
     subtask.recurrence.nextDate = nextDate;
-    subtask.scheduledDate = nextDate || subtask.scheduledDate;
-    subtask.completed = false;
+    subtask.completed = true;
     return true;
 }
 
@@ -1959,7 +2103,12 @@ function todoSetState(state, options) {
     options = options || {};
     try {
         const obj = (typeof state === 'string') ? JSON.parse(state) : state;
+        const wasSuppressingAutoSave = !!suppressAutoSave;
         applyProjectStateObject(obj);
+        const recurrenceChanged = refreshRecurringItems({ save: false });
+        if (recurrenceChanged && wasSuppressingAutoSave) {
+            suppressAutoSave = false;
+        }
 
         // Persiste aussi dans localStorage / <textarea>
         saveData();
@@ -2324,6 +2473,9 @@ if (typeof window !== 'undefined') {
     window.saveTodoFilterState = saveTodoFilterState;
     window.restoreTodoFilterState = restoreTodoFilterState;
     window.applyTodoFilterStateToControls = applyTodoFilterStateToControls;
+    window.refreshRecurringItems = refreshRecurringItems;
+    window.getNextRecurrenceDateAfter = getNextRecurrenceDateAfter;
+    window.todoSetTodayOverrideForTests = setTodayYmdOverrideForTests;
 }
 
 // C4 — Accessibilité des boutons globaux (type="button" + aria-disabled synchronisé)
@@ -2512,6 +2664,7 @@ async function cloudSave(options) {
                     try {
                         const data = JSON.parse(e.newValue || '{}');
                         applyProjectStateObject(data);
+                        refreshRecurringItems();
                         renderCategories();
                         restoreTodoFilterState();
                         renderTasks();
@@ -4194,31 +4347,6 @@ function toggleTaskCompletion(taskId) {
 
             return filteredTasks;
         }
-
-        // Basculer l'état de complétion d'une tâche
-        function toggleTaskCompletion(taskId) {
-  const task = tasks.find(t => t.id === taskId);
-  if (task) {
-    const wasCompleted = !!task.completed;
-    normalizeTaskDates(task);
-    if (!wasCompleted && task.recurrence.enabled) {
-        applyTaskRecurrenceOnCompletion(task);
-        projectCelebrated = false;
-        projectCompletedAt = null;
-    } else {
-        task.completed = !wasCompleted;
-        task.completionDate = task.completed ? new Date().toISOString() : null;
-        if (!task.completed) {
-            projectCelebrated = false;
-            projectCompletedAt = null;
-        }
-    }
-    saveData();
-    renderTasks();
-    checkProjectCompletion();   // ← ajouté
-  }
-}
-
         // Filtrer les tâches par statut (accessibilité : gestion aria-pressed)
         (function bindStatusFilters(){
             const buttons = document.querySelectorAll('[data-filter]');
@@ -4670,6 +4798,7 @@ function toggleTaskCompletion(taskId) {
         // Initialisation
         function init() {
             loadData();
+            refreshRecurringItems();
             updateTopTabs();
             renderCategories();
             restoreTodoFilterState();
